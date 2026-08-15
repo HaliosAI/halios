@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  cli:
+    name: CLI / Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m ruff check .
+      - run: python -m pytest -q
+
+  skill:
+    name: Agent Skill installation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Discover and install
+        working-directory: ${{ runner.temp }}
+        run: |
+          npx --yes skills@1.5.9 add "$GITHUB_WORKSPACE" \
+            --skill halios \
+            --agent codex \
+            --agent claude-code \
+            --agent cursor \
+            --agent github-copilot \
+            --agent gemini-cli \
+            --agent opencode \
+            --copy \
+            --yes
+          test -f .agents/skills/halios/SKILL.md
+          test -f .claude/skills/halios/SKILL.md
+      - name: Verify CLI and skill versions
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          cli_version = re.search(
+              r'__version__\s*=\s*"([^"]+)"',
+              Path("halios_cli/_version.py").read_text(encoding="utf-8"),
+          ).group(1)
+          skill = Path("skills/halios/SKILL.md").read_text(encoding="utf-8")
+          skill_version = re.search(r'^\s+version:\s*"([^"]+)"', skill, re.MULTILINE).group(1)
+          minimum = re.search(r'^\s+min_halios_cli:\s*"([^"]+)"', skill, re.MULTILINE).group(1)
+          assert cli_version == skill_version
+          assert minimum == cli_version
+          PY
+
+  package:
+    name: Distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*

@@ -1,0 +1,21 @@
+name: Bug report
+description: Report reproducible CLI or Agent Skill behavior
+title: "[Bug]: "
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction
+      description: Include commands, sanitized configuration, and observed output.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Version
+      description: Output from `halios --version` or the installed skill version.
+    validations:
+      required: true

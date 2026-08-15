@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.halios.ai/eval.schema.json",
+  "title": "Halios evaluation plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "goals", "risks", "checks", "reliability_bar"],
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "$ref": "#/$defs/nonEmptyString" },
+    "goals": { "$ref": "#/$defs/nonEmptyStringList" },
+    "risks": { "$ref": "#/$defs/nonEmptyStringList" },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/check" }
+    },
+    "reliability_bar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min_pass_rate", "hard_gates_must_pass"],
+      "properties": {
+        "min_pass_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "hard_gates_must_pass": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "stableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "nonEmptyStringList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "config"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stableId" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "classifier", "contains", "equals", "exists", "fuzzy", "greater_than",
+            "is_empty", "is_null", "json_schema", "less_than", "llm_judge", "not_empty",
+            "not_null", "one_of", "regex"
+          ]
+        },
+        "field": { "$ref": "#/$defs/nonEmptyString" },
+        "operator": { "type": "string", "enum": ["AND", "OR"] },
+        "key": { "type": ["string", "null"] },
+        "config": { "type": "object" }
+      }
+    },
+    "evaluationConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_name", "score_threshold"],
+      "properties": {
+        "task_name": { "$ref": "#/$defs/nonEmptyString" },
+        "task_slug": { "$ref": "#/$defs/nonEmptyString" },
+        "aggregate_method": {
+          "type": "string",
+          "enum": ["average", "weighted_average", "max", "min"]
+        },
+        "score_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "per_event": { "type": "boolean" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "category", "target", "scope", "pass_logic", "rules", "evaluation_config"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stableId" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "type": ["string", "null"] },
+        "category": { "type": "string", "enum": ["safety", "quality", "compliance", "custom"] },
+        "protected": { "type": "boolean" },
+        "target": {
+          "type": "string",
+          "enum": ["user_message", "assistant_message", "tool_usage", "full_conversation"]
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["all", "last_n", "first_n", "after_tool", "tool_name", "input_arguments", "output_values", "tool_call_context", "entire"]
+        },
+        "tool_name": { "$ref": "#/$defs/nonEmptyString" },
+        "field": { "$ref": "#/$defs/nonEmptyString" },
+        "scope_params": { "type": "object" },
+        "pass_logic": { "type": "string", "enum": ["all", "any"] },
+        "rules": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rule" } },
+        "evaluation_config": { "$ref": "#/$defs/evaluationConfig" }
+      }
+    }
+  }
+}

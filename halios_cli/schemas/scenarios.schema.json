@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.halios.ai/scenarios.schema.json",
+  "title": "Halios scenario suite",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "scenarios"],
+  "properties": {
+    "version": { "const": 1 },
+    "repetitions": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "generation_mode": {
+      "$ref": "#/$defs/generationMode"
+    },
+    "max_turns": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/scenario" }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "generationMode": {
+      "type": "string",
+      "enum": ["simulation", "simulation-with-arc-hint"]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "goal", "risk_label", "max_turns"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString",
+          "maxLength": 120,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "type": ["string", "null"] },
+        "goal": { "$ref": "#/$defs/nonEmptyString" },
+        "initial_message": { "$ref": "#/$defs/nonEmptyString" },
+        "agent_context": {
+          "type": "object",
+          "description": "Starting state intentionally provided to the application under test."
+        },
+        "simulator_context": {
+          "type": "object",
+          "description": "Private facts available only to the simulated user."
+        },
+        "persona": { "type": ["string", "null"] },
+        "constraints": { "$ref": "#/$defs/stringList" },
+        "risk_label": {
+          "type": "string",
+          "enum": ["benign", "boundary", "adversarial"]
+        },
+        "generation_mode": {
+          "$ref": "#/$defs/generationMode"
+        },
+        "arc_messages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "situation_tags": { "$ref": "#/$defs/stringList" },
+        "expected_guardrail_trigger": { "type": "boolean" },
+        "max_turns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "source_trace_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{32}$"
+        }
+      },
+      "anyOf": [
+        { "required": ["initial_message"] },
+        { "required": ["arc_messages"] }
+      ]
+    }
+  }
+}

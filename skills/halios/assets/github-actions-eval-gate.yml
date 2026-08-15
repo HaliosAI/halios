@@ -1,0 +1,81 @@
+name: Halios evaluation gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: halios-eval-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HALIOS_API_KEY: ${{ secrets.HALIOS_API_KEY }}
+      HALIOS_OTLP_TOKEN: ${{ secrets.HALIOS_OTLP_TOKEN }}
+      HALIOS_BASE_URL: ${{ vars.HALIOS_BASE_URL }}
+      PR_NUMBER: ${{ github.event.pull_request.number || github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v6
+
+      # Replace this step with the repository's normal locked dependency setup. The command in
+      # .halios/config.toml must be runnable before Halios starts the jsonl adapter.
+      - name: Install application dependencies
+        run: uv sync --frozen
+
+      - name: Install Halios CLI
+        run: uv tool install 'haliosai-cli>=2.0.0,<3'
+
+      - name: Validate project and suite
+        run: |
+          halios project check
+          halios eval review --json
+
+      - name: Run reliability gate
+        id: halios
+        shell: bash
+        env:
+          HALIOS_CI_PUBLISH_TOKEN: ${{ github.event_name == 'push' && secrets.HALIOS_CI_PUBLISH_TOKEN || '' }}
+        run: |
+          set +e
+          args=(-k 5 --fail-below 0.95 --tag ci --tag "pr-${PR_NUMBER}" --json)
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${{ github.event.repository.default_branch }}" ]]; then
+            args+=(--publish --default-branch "${{ github.event.repository.default_branch }}")
+          fi
+          halios eval run "${args[@]}" >halios-eval-report.json 2>halios-eval.log
+          status=$?
+          cat halios-eval.log
+          if [[ ! -s halios-eval-report.json ]]; then
+            run_id="$(sed -n 's/^Evaluation run \([^ ]*\).*/\1/p' halios-eval.log | head -1)"
+            if [[ -n "${run_id}" ]]; then
+              halios eval report "${run_id}" --failures --json >halios-eval-report.json || true
+            fi
+          fi
+          exit "${status}"
+
+      - name: Upload Halios evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: halios-evidence-${{ github.run_id }}
+          path: |
+            halios-eval.log
+            halios-eval-report.json
+          if-no-files-found: warn
+          retention-days: 30

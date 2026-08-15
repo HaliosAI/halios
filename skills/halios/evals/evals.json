@@ -1,0 +1,53 @@
+{
+  "skill_name": "halios",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Setup agent evaluation for this project using Halios.",
+      "expected_output": "Inspects the agent, installs the Halios CLI if missing, uses separate auth/project setup, writes only the three-file skeleton, configures stock OTel plus a jsonl-v1 adapter, authors evals/scenarios, and smoke-tests a fresh run.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "This production trace failed. Turn it into a regression and fix the agent: 0123456789abcdef0123456789abcdef",
+      "expected_output": "Retrieves stable JSON evidence, generates a scenario from intent rather than replaying assistant output, fixes code, and reruns the failure plus protected scenarios.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Our eval suite is passing. Try prompt optimization but don't weaken the safety checks.",
+      "expected_output": "Verifies suite health, freezes an immutable baseline, uses backend guidance for one bounded coding-agent prompt edit at a time, records unchanged-suite evidence, applies only a backend-accepted candidate, and verifies protected gates.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Our Python agent already exports OpenTelemetry spans. Halios shows the tool names, but every tool says no arguments or result captured. Fix the instrumentation without replacing our tracer provider.",
+      "expected_output": "Inspects the emitted semantic attributes and existing tracer setup, preserves the existing provider, uses current structured OTel GenAI tool arguments/results, verifies normalized tool kind/input/output with halios trace verify on a fresh runtime trace, and does not put telemetry logic in only the eval adapter.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Connect this multi-agent RAG service to Halios. It uses a router agent, two specialist sub-agents, a vector database, a reranker, and several tools, with some OpenTelemetry already installed.",
+      "expected_output": "Inventories existing instrumentation, models a single W3C trace with nested agent, model, tool, retrieval, and reranker spans, captures the minimum structured evidence and identities, applies privacy controls, and verifies both production-runtime and eval-adapter traces before running evaluations.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Add a GitHub Actions release gate for this agent and instrument our staging deployment. Be clear about whether the Halios adapter runs in staging.",
+      "expected_output": "Adapts the bundled CI workflow, uses API and agent-scoped OTLP secrets without persisting credentials, runs adapter-based simulation only in the evaluation job, instruments the real staging runtime directly with deployment.environment.name=staging and immutable service.version, and verifies a real staging smoke trace after deployment.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "Tell me what's failing in prod for this Halios agent and turn the biggest recurring failure into a regression.",
+      "expected_output": "Uses production trace list, failed evaluator evidence, and clustering queries; distinguishes missing telemetry or missing check execution from no failures; verifies a representative trace; then drafts a sanitized regression from intent and preserves stable evidence IDs.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Why is the release blocked? The GitHub Halios check is red.",
+      "expected_output": "Inspects the GitHub run and immutable Halios run report, identifies whether setup, adapter, telemetry, check execution, protected behavior, threshold, or trusted publication caused the block, cites the relevant IDs and fields, and recommends a focused fix rather than a blind rerun.",
+      "files": []
+    }
+  ]
+}
