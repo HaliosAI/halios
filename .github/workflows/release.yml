@@ -17,11 +17,26 @@ jobs:
           python-version: "3.12"
       - name: Verify versions
         run: |
-          expected="${GITHUB_REF_NAME#v}"
-          package="$(python -c 'from halios_cli._version import __version__; print(__version__)')"
-          skill="$(python -c 'import re; from pathlib import Path; print(re.search(r"^\\s+version:\\s*\\\"([^\\\"]+)\\\"", Path("skills/halios/SKILL.md").read_text(), re.M).group(1))')"
-          test "$package" = "$expected"
-          test "$skill" = "$expected"
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          ref = os.environ["GITHUB_REF_NAME"]
+          expected = ref[1:] if ref.startswith("v") else ref
+
+          package = Path("halios_cli/_version.py").read_text(encoding="utf-8")
+          package_version = re.search(r'__version__\s*=\s*"([^"]+)"', package).group(1)
+
+          skill = Path("skills/halios/SKILL.md").read_text(encoding="utf-8")
+          skill_version = re.search(r'^\s*version:\s*"([^"]+)"', skill, re.MULTILINE).group(1)
+          min_cli = re.search(r'^\s*min_halios_cli:\s*"([^"]+)"', skill, re.MULTILINE).group(1)
+
+          assert package_version == expected, f"Package version {package_version} != {expected}"
+          assert skill_version == expected, f"Skill version {skill_version} != {expected}"
+          assert min_cli == expected, f"Skill min_halios_cli {min_cli} != {expected}"
+          print(f"Verified release version {expected} matches CLI and Skill.")
+          PY
       - run: python -m pip install build twine
       - run: python -m build
       - run: python -m twine check dist/*
