@@ -1,64 +1,101 @@
-# Halios CLI and Agent Skill
+# Halios
 
-The `halios` command is the machine-facing client used by the Halios Agent Skill and CI. It owns
-repository setup, evaluation-suite authoring, fresh scenario execution, evidence inspection, and
-prompt-optimization handoffs. Applications export their runtime telemetry with stock
-OpenTelemetry; the CLI is not an application tracing SDK.
+[![PyPI version](https://img.shields.io/pypi/v/haliosai-cli.svg)](https://pypi.org/project/haliosai-cli/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-```bash
-uv tool install 'haliosai-cli>=2.0.0'
-halios --version
-```
+**Your pair programmer for AI agent evaluations.**
 
-Use `pipx install 'haliosai-cli>=2.0.0'` when `uv` is unavailable. Install the cross-harness skill
-separately:
+Halios helps you build reliable AI agents in minutes. Add the Halios skill to **Codex**, **Claude Code**, **Cursor**, or your favorite coding agent, and create eval suites, run multi-turn simulations, investigate failures, and gate pull requests directly from your repository. 
+
+Halios provides the evaluation framework, developer tools, and hosted evaluation runtime underneath.
+
+---
+
+## Quickstart
+
+### 1. Install the Agent Skill
+
+Add the Halios skill to your coding agent environment:
 
 ```bash
 npx skills add HaliosAI/halios --skill halios
 ```
 
-The stable project workflow is:
+*(Works with Codex, Claude Code, Cursor, GitHub Copilot, Gemini CLI, OpenCode, and any harness supporting the open Agent Skills format).*
 
-```bash
-halios auth login
-halios project init --agent support-assistant --command "python tests/halios_adapter.py"
-halios eval review --json
-halios project configure --json
-halios project check --json
-halios eval run -k 3 --json
+### 2. Ask Your Coding Agent
+
+Prompt your agent to set up evaluations for your project:
+
+```text
+"Set up evals for this agent: inspect the repository, create realistic test scenarios and checks, and run a baseline."
 ```
 
-Prompt optimization is driven by the coding agent and the normal immutable eval workflow:
+Your agent will inspect your application entrypoint, configure standard OpenTelemetry, draft scenarios in `.halios/`, and run baseline evaluations.
+
+---
+
+### Standalone CLI Installation
+
+If you prefer to drive evaluations directly from the command line or CI:
 
 ```bash
-halios optimize start --baseline-run <run-id> --prompt-file path/to/system-prompt.txt --json
-# make one bounded prompt edit from the returned guidance, then run the unchanged suite
-halios eval run -k 3 --json
-halios optimize record <optimization-run-id> \
-  --evaluation-run <candidate-eval-run-id> \
-  --prompt-file path/to/system-prompt.txt \
-  --json
+# Recommended: Install with uv tool
+uv tool install 'haliosai-cli>=2.0.0'
+
+# Or install with pipx
+pipx install 'haliosai-cli>=2.0.0'
+
+# See available commands and usage
+halios --help
 ```
 
-Credentials are stored outside the repository. The repository contains only `.halios/config.toml`,
-`.halios/eval.yml`, and `.halios/scenarios.yml`.
+---
 
-In non-interactive CI, use `HALIOS_API_KEY` for control-plane commands and the separate
-agent-scoped `HALIOS_OTLP_TOKEN` for adapter trace export. Only trusted default-branch jobs should
-receive `HALIOS_CI_PUBLISH_TOKEN`. The jsonl adapter is used by local/CI simulation only; deployed
-staging and production applications export their own stock OpenTelemetry directly to Halios.
+## How It Works
 
-See the repository's
-[`skills/halios`](https://github.com/HaliosAI/halios/tree/main/skills/halios) workflow for
-coding-agent setup and
-[`OTEL_SCHEMA.md`](https://github.com/HaliosAI/haliosai-python-sdk/blob/main/OTEL_SCHEMA.md)
-for the telemetry accepted by Halios.
+1. **Inspect & Connect**: Your coding agent inspects your agent's tools, policies, and runtime, then configures standard OpenTelemetry export.
+2. **Author Scenarios & Checks**: Test cases, rubrics, and failure criteria are stored directly in your repository (`.halios/scenarios.yml` and `.halios/eval.yml`). You own the evaluation suite.
+3. **Simulate Multi-Turn Trajectories**: Halios runs fresh simulation passes against your agent across edge cases, tool dependencies, and user personas.
+4. **Investigate & Fix Failures**: Pinpoint hallucinated parameters, broken tool handoffs, or policy violations from complete trace evidence.
+5. **Gate Pull Requests**: Run protected checks in CI to block regressions before merging to production.
+6. **Monitor Production**: Evaluate production traces using the same checks, and turn real-world failures into new regression test scenarios.
+
+---
+
+## Key Principles
+
+- **You own the evaluation suite**: Scenarios and checks are clean YAML files stored in your Git repository.
+- **Fresh simulations, not static replays**: Halios tests real agent execution across multiple turns, rather than replaying outdated completions.
+- **Framework agnostic**: Works with any agent architecture—OpenAI Agents SDK, LangChain, LlamaIndex, PydanticAI, or custom workflows.
+- **Stock OpenTelemetry**: Applications emit standard OpenTelemetry GenAI spans; no proprietary vendor lock-in in your production runtime.
+- **Unified local, CI, and production loop**: The same checks run during local development, gate merge requests in CI, and monitor live production traces.
+
+---
+
+## Resources
+
+- **Website**: [halios.ai](https://halios.ai)
+- **Documentation**: [docs.halios.ai](https://docs.halios.ai)
+- **Python SDK**: [github.com/HaliosAI/haliosai-python-sdk](https://github.com/HaliosAI/haliosai-python-sdk)
+- **Public Skill Source**: [`skills/halios/`](skills/halios/)
+
+---
 
 ## Development
 
 ```bash
+# Clone and install locally in editable mode
+git clone https://github.com/HaliosAI/halios.git
+cd halios
 python -m pip install -e '.[dev]'
+
+# Run the test suite
 python -m pytest -q
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution and release process.
+---
+
+## License
+
+[Apache 2.0](LICENSE) © Anomalytica Inc. 2026
