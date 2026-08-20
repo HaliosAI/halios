@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-import json
-import secrets
-import threading
-import urllib.parse
-import webbrowser
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import time
 
 import httpx
 import typer
@@ -25,6 +20,9 @@ from .cli_support import (
 
 app = typer.Typer(help="Authenticate the Halios CLI.", no_args_is_help=True)
 
+# INVARIANT: Match the server-side poll interval from CLIAuthRequestResponse.interval.
+_POLL_INTERVAL_S = 2
+
 
 @app.command("login")
 def login(
@@ -32,87 +30,95 @@ def login(
     base_url: str = typer.Option(DEFAULT_BASE_URL, "--base-url"),
     api_key: str | None = typer.Option(None, "--api-key", envvar="HALIOS_API_KEY", hidden=True),
 ) -> None:
-    """Authorize this machine and store credentials outside the repository."""
+    """Authorize this machine and store credentials outside the repository.
+
+    Opens your browser to complete authorization.  No local HTTP server is
+    started; the CLI polls the Halios API until you approve or the session expires.
+    """
     normalized_url = normalize_url(base_url)
+
+    # Fast path: explicit API key provided (e.g. CI environments or manual --api-key flag).
     if api_key:
         save_profile(profile, base_url=normalized_url, api_key=api_key)
         typer.echo(f"Logged in as profile '{profile}'.")
         return
 
-    result: dict[str, str] = {}
-    completed = threading.Event()
-    state = secrets.token_urlsafe(24)
-
-    class CallbackHandler(BaseHTTPRequestHandler):
-        def _cors(self) -> None:
-            self.send_header("Access-Control-Allow-Origin", normalized_url)
-            self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
-
-        def do_OPTIONS(self) -> None:  # noqa: N802
-            self.send_response(204)
-            self._cors()
-            self.end_headers()
-
-        def do_POST(self) -> None:  # noqa: N802
-            if self.path != "/callback":
-                self.send_error(404)
-                return
-            length = int(self.headers.get("content-length") or 0)
-            try:
-                body = json.loads(self.rfile.read(length))
-            except (ValueError, UnicodeDecodeError):
-                self.send_error(400)
-                return
-            if not isinstance(body, dict) or not secrets.compare_digest(
-                str(body.get("state") or ""), state
-            ):
-                self.send_error(422)
-                return
-            if body.get("error"):
-                result["error"] = str(body["error"])
-            elif body.get("api_key"):
-                result.update({key: str(value) for key, value in body.items() if value is not None})
-            else:
-                self.send_error(422)
-                return
-            self.send_response(204)
-            self._cors()
-            self.end_headers()
-            completed.set()
-
-        def log_message(self, _format: str, *_args: object) -> None:
-            return
-
-    server = ThreadingHTTPServer(("127.0.0.1", 0), CallbackHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    login_url = f"{normalized_url}/cli-login?" + urllib.parse.urlencode(
-        {"port": server.server_port, "profile": profile, "state": state}
-    )
-    typer.echo(f"Open this URL to authorize the CLI:\n{login_url}")
-    webbrowser.open(login_url)
+    # --- Step 1: Request a device-code session from the backend ---
     try:
-        if not completed.wait(timeout=300):
-            raise typer.BadParameter("Login timed out after 5 minutes")
-    finally:
-        server.shutdown()
-        server.server_close()
+        with httpx.Client(timeout=10) as http:
+            resp = http.post(
+                f"{normalized_url}/api/v1/cli-auth/request",
+                params={"base_url": normalized_url},
+            )
+            resp.raise_for_status()
+            session_data = resp.json()
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.json().get("detail", exc.response.text) if exc.response.content else str(exc)
+        raise typer.BadParameter(f"Could not start login session: {detail}") from exc
+    except httpx.HTTPError as exc:
+        raise typer.BadParameter(
+            f"Could not reach {normalized_url}. Check your network or --base-url."
+        ) from exc
 
-    if result.get("error") == "access_denied":
-        raise typer.BadParameter("Authorization was cancelled in the browser")
-    if result.get("error"):
-        raise typer.BadParameter(f"Authorization failed: {result['error']}")
+    device_code: str = session_data["device_code"]
+    # INTENT: CLI builds verification_url itself so it uses its own configured base_url,
+    # not whatever the server returned (which may differ in local dev setups).
+    verification_url = f"{normalized_url}/cli-auth?code={device_code}&profile={profile}"
+    expires_in: int = session_data.get("expires_in", 300)
 
-    save_profile(
-        profile,
-        base_url=normalized_url,
-        api_key=result["api_key"],
-        organization_id=result.get("organization_id"),
-        api_key_id=int(result["api_key_id"]) if result.get("api_key_id") else None,
-        expires_at=result.get("expires_at"),
-    )
-    typer.echo(f"Logged in as profile '{profile}'.")
+    # --- Step 2: Open the browser and tell the user what's happening ---
+    typer.echo(f"\nOpening your browser to authorize the CLI:\n  {verification_url}\n")
+    typer.echo("Waiting for authorization in browser…  (Ctrl+C to cancel)\n")
+
+    import webbrowser
+    webbrowser.open(verification_url)
+
+    # --- Step 3: Poll until authorized, denied, or expired ---
+    poll_url = f"{normalized_url}/api/v1/cli-auth/poll"
+    deadline = time.monotonic() + expires_in
+
+    try:
+        with httpx.Client(timeout=10) as http:
+            while time.monotonic() < deadline:
+                time.sleep(_POLL_INTERVAL_S)
+                try:
+                    poll_resp = http.get(poll_url, params={"code": device_code})
+                    poll_resp.raise_for_status()
+                    result = poll_resp.json()
+                except httpx.HTTPError:
+                    # WHY: Transient network errors should not abort the wait.
+                    continue
+
+                poll_status: str = result.get("status", "expired")
+
+                if poll_status == "pending":
+                    continue
+
+                if poll_status == "authorized":
+                    save_profile(
+                        profile,
+                        base_url=normalized_url,
+                        api_key=result["api_key"],
+                        organization_id=result.get("organization_id"),
+                        api_key_id=int(result["api_key_id"]) if result.get("api_key_id") else None,
+                        expires_at=result.get("expires_at"),
+                    )
+                    typer.echo(f"Logged in as profile '{profile}'.")
+                    return
+
+                if poll_status == "denied":
+                    raise typer.BadParameter("Authorization was cancelled in the browser.")
+
+                # status == "expired" or unknown
+                raise typer.BadParameter(
+                    "Login session expired. Please run 'halios auth login' again."
+                )
+
+    except KeyboardInterrupt:
+        typer.echo("\nLogin cancelled.")
+        raise typer.Exit(code=1)
+
+    raise typer.BadParameter("Login timed out. Please run 'halios auth login' again.")
 
 
 @app.command("status")
