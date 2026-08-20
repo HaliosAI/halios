@@ -53,7 +53,10 @@ def login(
             resp.raise_for_status()
             session_data = resp.json()
     except httpx.HTTPStatusError as exc:
-        detail = exc.response.json().get("detail", exc.response.text) if exc.response.content else str(exc)
+        if exc.response.content:
+            detail = exc.response.json().get("detail", exc.response.text)
+        else:
+            detail = str(exc)
         raise typer.BadParameter(f"Could not start login session: {detail}") from exc
     except httpx.HTTPError as exc:
         raise typer.BadParameter(
