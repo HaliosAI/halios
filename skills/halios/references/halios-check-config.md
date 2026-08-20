@@ -40,8 +40,10 @@ quality independent of whichever coding model happens to author the first draft.
    and tone, split it into three checks.
 4. **Grade outcomes, not brittle paths.** Require the correct result, not an exact tool sequence or
    assistant sentence unless the sequence/text is itself a contractual requirement.
-5. **Give judges an out.** A rubric must allow a non-applicable/insufficient-evidence result instead
-   of forcing a hallucinated verdict.
+5. **Give judges an out (Tri-State N/A).** A condition-dependent rubric must explicitly state:
+   "If [condition] does not occur in the conversation, return insufficient evidence."
+   When returned, Halios marks the check execution as `status: not_applicable` (`score: null`,
+   `passed: null`) and excludes it from the pass-rate denominator.
 6. **Protect hard requirements.** Safety, privacy, policy boundaries, and strict tool schemas should
    be protected checks and should have adversarial scenarios.
 
