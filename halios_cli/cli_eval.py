@@ -354,8 +354,8 @@ def _eval_quality_gaps(eval_plan: dict[str, Any], scenarios: list[dict[str, Any]
         ):
             gaps.append(
                 f"Scenario '{scenario_id}': simulator_context is empty for a multi-turn scenario; "
-                "populate private user facts/preferences/state in simulator_context so the simulator "
-                "can reveal them dynamically upon agent request"
+                "populate private user facts/preferences/state in simulator_context so the "
+                "simulator can reveal them dynamically upon agent request"
             )
     return list(dict.fromkeys(gaps))
 
