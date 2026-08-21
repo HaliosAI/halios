@@ -1,5 +1,21 @@
 # Connect a repository
 
+## Architecture: Main Application Code vs. Adapter Bridge
+
+Halios connects to repositories using a clean two-tier separation:
+1. **Main Application / Agent Code (Permanent Instrumentation)**:
+   - Always instrument the **real application codebase and runtime entrypoints** (whether in Python, TypeScript/Node.js, Go, etc.).
+   - Configure OpenTelemetry SDK, framework/provider instrumentors (e.g. model clients, tool handlers, retrieval pipelines), and tool execution spans inside the real application code.
+   - This ensures telemetry is emitted consistently across all environments: local development, eval simulations, staging, and production.
+2. **The Test Adapter is ONLY a Thin Simulation Bridge**:
+   - The adapter exists solely for `halios eval run` simulations (`jsonl-v1` line-by-line JSON on stdin/stdout).
+   - The adapter **must invoke the already-instrumented agent implementation from the main codebase**.
+   - The adapter must **NEVER** contain its own separate tracer initialization, framework re-instrumentation, or duplicate tracing stack. Its only tasks are: extract/attach incoming W3C `traceparent`, invoke the agent implementation, call `force_flush()`, and write the assistant JSON response to `stdout`.
+
+---
+
+## Steps
+
 1. Inspect the agent entrypoint, prompt/tool definitions, runtime, and current OpenTelemetry setup.
 2. Run `halios --version` and require version 2.0 or newer. If the CLI is absent or older, install or
    replace it as an isolated user-level tool with `uv tool install 'haliosai-cli>=2.0.0'` when `uv`

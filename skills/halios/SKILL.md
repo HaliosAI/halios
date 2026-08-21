@@ -56,14 +56,17 @@ ambiguous agent identity, or a product decision that changes the reliability con
   Immediately report the resulting Halios agent display name, UUID, and dashboard URL to the user,
   and repeat them in the final onboarding summary. Never leave the user to infer which server agent
   was created from `.halios/config.toml`.
-- Instrument the real application entrypoint with stock OpenTelemetry and ecosystem instrumentation;
-  initialize it before provider/framework clients are imported. Production users do not run through
-  the eval adapter. Use the optional Halios Python SDK only for explicit inline intervention with
-  `Client.evaluate_request(...)` and `Client.evaluate_response(...)`; it never configures tracing.
-- Keep three execution paths explicit. The adapter is used only by `halios eval run` to simulate a
-  user against the real application code. CI evaluation runs use that adapter. A deployed staging
-  or production service emits OTLP directly from its real runtime and never runs through the
-  adapter. Use [the deployment contract](references/deployment-instrumentation.md) for its values.
+- Instrument the real application codebase and runtime entrypoints (Python, TypeScript/Node.js, Go, etc.)
+  with OpenTelemetry SDK and ecosystem instrumentations; initialize tracing before provider/framework
+  clients are imported. Never instrument only the eval adapter. Production and staging users run against
+  the real application code, not the eval adapter. Use the optional Halios Python SDK only for explicit
+  inline intervention with `Client.evaluate_request(...)` and `Client.evaluate_response(...)`; it never
+  configures tracing.
+- Keep execution paths explicit. The adapter is used only by `halios eval run` to simulate a
+  user against the real application code. The adapter must invoke the already-instrumented agent
+  implementation from the codebase and only attach the incoming W3C `traceparent`. A deployed staging or production
+  service emits OTLP directly from its real runtime and never runs through the adapter. Use
+  [the deployment contract](references/deployment-instrumentation.md) for its values.
 - Generate a project-owned `jsonl-v1` adapter that calls the same instrumented agent implementation,
   then smoke-test it. The adapter is only an eval/optimization execution bridge. Use `trial_id` for
   stateful agent sessions, the latest `message` for stateful agents, and full `messages` for stateless
