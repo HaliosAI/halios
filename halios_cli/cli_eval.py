@@ -344,6 +344,19 @@ def _eval_quality_gaps(eval_plan: dict[str, Any], scenarios: list[dict[str, Any]
                 f"Scenario '{scenario_id}': constraints prescribe an assistant answer; "
                 "describe the user pressure and let checks grade the outcome"
             )
+        simulator_context = scenario.get("simulator_context")
+        arc_messages = scenario.get("arc_messages") or []
+        max_turns = int(scenario.get("max_turns") or 1)
+        if (
+            (max_turns > 1 or len(arc_messages) > 0)
+            and not simulator_context
+            and scenario.get("generation_mode") != "single-turn"
+        ):
+            gaps.append(
+                f"Scenario '{scenario_id}': simulator_context is empty for a multi-turn scenario; "
+                "populate private user facts/preferences/state in simulator_context so the simulator "
+                "can reveal them dynamically upon agent request"
+            )
     return list(dict.fromkeys(gaps))
 
 

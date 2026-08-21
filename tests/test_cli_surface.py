@@ -190,3 +190,22 @@ def test_adapter_receives_only_agent_context(tmp_path) -> None:
     assert outcome == "completed"
     assert stop_reason == "goal_resolved"
     assert error == {}
+
+
+def test_eval_quality_gaps_flags_empty_simulator_context() -> None:
+    from halios_cli.cli_eval import _eval_quality_gaps
+
+    scenarios = [
+        {
+            "id": "multi-turn-missing-context",
+            "title": "Account check",
+            "goal": "Verify email check",
+            "initial_message": "Hi",
+            "agent_context": {},
+            "simulator_context": {},
+            "arc_messages": ["Provide email when asked"],
+            "max_turns": 4,
+        }
+    ]
+    gaps = _eval_quality_gaps(eval_plan={}, scenarios=scenarios)
+    assert any("simulator_context is empty for a multi-turn scenario" in gap for gap in gaps)

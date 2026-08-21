@@ -47,7 +47,7 @@ quality independent of whichever coding model happens to author the first draft.
 6. **Protect hard requirements.** Safety, privacy, policy boundaries, and strict tool schemas should
    be protected checks and should have adversarial scenarios.
 
-## Scenario evidence
+## Scenario evidence & context partitioning
 
 For every important invariant, include:
 
@@ -57,8 +57,12 @@ For every important invariant, include:
 - an adversarial case for protected policy;
 - a multi-turn continuation when the behavior could degrade after the first response.
 
-Scenarios specify user intent, context, persona, and pressure. They must not prescribe the desired
-assistant wording or encode the answer that the rubric should independently judge.
+### Context partitioning & archetype rules:
+- **`agent_context`**: State delivered directly to the target application/adapter at runtime. The scenario designer must inspect the target agent's codebase/adapter to determine what runtime parameters the agent expects (e.g. `channel`, `workspace_root`). Leave `{}` if none.
+- **`simulator_context`**: Private state for the test simulator (credentials, ground truth, preferences). Halios keeps this backend-only and never sends it to the application.
+- **Conversational / Exploratory scenarios**: Start with minimal, natural greetings (`"Hi"`). Do not preload full user credentials or multi-part questions in `initial_message`; let the agent elicit them turn-by-turn. Write `arc_messages` as behavioral intent milestones, not rigid scripts.
+- **Task-Oriented / Execution scenarios**: Preloading complete task specifications, instructions, or repo files in `initial_message` and `agent_context` is natural and standard.
+- Scenarios must not prescribe the desired assistant wording in `constraints`.
 
 ## Mandatory review questions
 

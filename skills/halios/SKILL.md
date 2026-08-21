@@ -13,8 +13,8 @@ description: >
 license: Apache-2.0
 compatibility: Requires shell access and Python 3.10+ to install and run haliosai-cli 2.0 or newer.
 metadata:
-  version: "2.0.3"
-  min_halios_cli: "2.0.3"
+  version: "2.0.4"
+  min_halios_cli: "2.0.4"
 ---
 
 # Halios agent reliability
