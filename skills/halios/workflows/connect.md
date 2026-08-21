@@ -33,6 +33,14 @@
      immutable `service.version`, and `deployment.environment.name` in the actual runtime.
    - `halios eval run` injects the eval endpoint/token into the adapter process automatically; that
      does not configure a deployed application.
+   - **Environment Variable Resolution**: Never write hand-rolled `os.getenv()` string-parsing or splits.
+     Pass unparameterized `OTLPSpanExporter()` or let the OpenTelemetry SDK / wrapper read the environment
+     natively so standard OTel precedence (`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` > `OTEL_EXPORTER_OTLP_ENDPOINT`)
+     and header parsing operate as specified.
+   - **Framework Wrappers (Traceloop / OpenLLMetry / LiteLLM / LangChain)**: Halios backend ingest
+     automatically normalizes standard OpenTelemetry GenAI attributes (`gen_ai.*`) and common wrapper
+     spans (`traceloop.span.kind`, etc.). Configure wrappers to export via standard OTLP/HTTP to the
+     provided endpoint/headers rather than defaulting to vendor cloud endpoints.
 7. Follow the contract's existing-instrumentation decision flow. Do not install a second tracer
    provider when the application already has one; attach Halios's OTLP exporter/processor to the
    existing provider and preserve its context propagation. Prefer ecosystem instrumentation over
@@ -47,16 +55,22 @@
 9. Adapt one template from `../assets/` to the repository's real imports and state model. The adapter
    must call the same agent implementation as the real runtime and should only attach the incoming
    `traceparent`; do not build a second instrumentation stack in the adapter.
+   - **Mandatory `force_flush()`**: In `jsonl-v1` adapters, spans are buffered asynchronously by
+     `BatchSpanProcessor`. The adapter **must** invoke `trace.get_tracer_provider().force_flush()`
+     at the end of each turn before printing the JSON response line to `stdout` so spans reach Halios
+     before evaluation runs.
 10. After the design workflow has configured the persistent server suite, run
    `halios project check`, then verify two paths separately:
    - Send one JSON request through the adapter and confirm its eval trace reaches Halios.
    - Send one request through the application's real local/staging entrypoint and confirm a trace
      with the correct non-evaluation `deployment.environment.name` reaches Halios.
    For each trace, run `halios trace verify <trace-id> --json` and inspect the returned structure:
-   one root,
-   valid parent links, ordered model/tool/retrieval/sub-agent children, captured required content,
+   one root, valid parent links, ordered model/tool/retrieval/sub-agent children, captured required content,
    and correct environment/service identity. Treat either missing or structurally incomplete trace
    as incomplete instrumentation; do not proceed to simulations/evals.
+   - **Distinguish Telemetry Gaps from Model Decisions**: If a tool span is absent, check whether the
+     LLM actually emitted a structured `tool_calls` payload or responded conversationally in text.
+     A model's decision not to invoke a tool is an agent steering/prompt issue, not an exporter bug.
 
 Do not introduce the Halios gateway unless the user explicitly asks for provider proxying. Do not
 use proprietary SDK tracing when the framework can emit OTLP.

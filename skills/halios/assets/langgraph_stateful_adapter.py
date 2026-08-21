@@ -25,6 +25,13 @@ async def call_agent(request: dict) -> dict:
 async def main() -> None:
     for line in sys.stdin:
         response = await call_agent(json.loads(line))
+        try:
+            from opentelemetry import trace
+            provider = trace.get_tracer_provider()
+            if hasattr(provider, "force_flush"):
+                provider.force_flush()
+        except Exception:
+            pass
         sys.stdout.write(json.dumps(response) + "\n")
         sys.stdout.flush()
 

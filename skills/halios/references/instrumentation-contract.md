@@ -82,16 +82,17 @@ Local/CI evaluation normally needs captured messages, tool bodies, and retrieval
 capture requires an explicit redaction/allow-list policy; validate the redacted shape as well as the
 unredacted development shape.
 
-## Framework policy
+## Framework policy & OTel exporter resolution
 
-Halios owns normalization, not framework-specific trace schemas. Maintain a small compatibility
-matrix and focused recipes for commonly used instrumentors, but keep this contract as the acceptance
-boundary. A framework recipe may explain installation order and how to enable content capture; it
-must not redefine the canonical evidence requirements.
+Halios owns backend normalization, not framework-specific trace schemas.
+- **Backend normalization**: Halios automatically normalizes OpenTelemetry GenAI semantic conventions (`gen_ai.*`) as well as wrapper conventions (Traceloop/OpenLLMetry `traceloop.span.kind`, LiteLLM proxy traces, LangChain, Codex).
+- **Environment variables**: Never write custom parsing for `os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")`. Pass unparameterized `OTLPSpanExporter()` or let the SDK/wrapper resolve environment variables directly so that signal-specific precedence (`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` > `OTEL_EXPORTER_OTLP_ENDPOINT`) and header parsing work natively.
+- **Turn-based flush**: Short-lived subprocesses and `jsonl-v1` adapters must invoke `trace.get_tracer_provider().force_flush()` at the end of each turn before emitting the JSON response line to ensure background batch processors flush all spans to Halios before evaluation starts.
+- **Distinguish telemetry vs model behavior**: If tool spans are absent in an evaluation run, inspect the raw completion output first. If the LLM replied textually without emitting a `tool_calls` structure, the issue is model steering/prompting, not telemetry export.
 
 When an unknown instrumentor is encountered:
 
-1. Export one representative trace locally.
+1. Export one representative trace locally to standard OTLP/HTTP.
 2. Map its semantic attributes to this contract without replacing working instrumentation.
 3. Add the smallest missing manual spans or a Halios ingest normalizer.
 4. Add an ingest fixture/regression test for that convention before declaring support.
