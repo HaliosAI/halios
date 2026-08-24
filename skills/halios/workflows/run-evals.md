@@ -14,10 +14,12 @@
    trace back from Halios and verify its organization-visible agent scope, evaluation membership,
    W3C trace/span IDs, parent topology, ended root span, structured input/output messages, captured
    content on instrumented child spans, and one error-free evaluator execution for every configured
-   check. A run card appearing in the UI is not proof that evaluation completed.
+   check. A run card appearing in the UI is not proof that evaluation completed. Preserve
+   `links.evaluation_run`, `links.evaluation_traces`, and `links.trace` from the completed report.
 3. For a setup, connect, or configure request, stop after this one smoke command. Report the agent
    identity, configured suite counts, smoke run id, trace id, telemetry verification, and check
-   results. Do not run the full bank, investigate behavioral failures beyond this summary, or edit
+   results. Include a compact **Review in Halios** section with the CLI-provided suite, run, and
+   representative trace links. Do not run the full bank, investigate behavioral failures beyond this summary, or edit
    the agent prompt, tools, or code. Ask whether the user wants a full-suite evaluation and require
    them to choose the number of trials per scenario. If the smoke command fails, report the exact
    setup or telemetry blocker and stop rather than expanding into a repair loop.
@@ -32,7 +34,8 @@ repository.
 
 Any missing/incomplete telemetry or malformed stored trace is a hard CLI failure, even when the
 adapter itself returned successfully. Retrieve failure evidence for the report, but do not edit the
-agent unless the user separately asks to fix or improve it.
+agent unless the user separately asks to fix or improve it. Surface the exact run and trace links
+returned by the CLI so the user can inspect the same evidence visually.
 
 ## Diagnose or fix
 

@@ -27,6 +27,7 @@ For each representative failure:
 
 1. Fetch `halios trace show <trace-id> --include spans,checks --json`.
 2. Run `halios trace verify <trace-id> --json` before trusting missing evidence as agent behavior.
+   Preserve `links.trace` for the final human-review handoff.
 3. Identify the user intent, deployed `service.version`, failure mechanism, check/rubric, and affected
    tool/retrieval/policy path—not merely the old assistant text.
 4. Run `halios scenario generate --from-trace <trace-id>` to create a local Git draft.
@@ -37,4 +38,4 @@ For each representative failure:
 Use `halios eval report <run-id> --failures --json` when the failure belongs to a bounded run. For a
 blocked GitHub release, follow [the CI diagnosis workflow](ci.md). Preserve run, scenario, trace,
 check, commit, and GitHub run IDs in coding-agent handoffs so another agent can retrieve the same
-evidence.
+evidence. Include the CLI-provided exact run and representative trace links in the diagnosis summary.

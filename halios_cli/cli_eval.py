@@ -24,8 +24,10 @@ from jsonschema import Draft202012Validator
 
 from .cli_support import (
     ApiClient,
+    emit_review_links,
     evaluation_suite_digest,
     git_provenance,
+    halios_ui_links,
     load_project_config,
     load_yaml,
     resolve_credentials,
@@ -801,9 +803,28 @@ def _raise_for_failed_run(report: dict[str, Any], run_id: str) -> None:
         message = str(error.get("message") or trial.get("outcome") or trial.get("state"))
         details.append(f"{trial.get('scenario_id') or trial.get('id')}: {message}")
     suffix = f" ({'; '.join(details)})" if details else ""
+    run_url = str((report.get("links") or {}).get("evaluation_run") or "")
+    review = f" Review in Halios: {run_url}." if run_url else ""
     raise typer.BadParameter(
         f"Evaluation run {run_id} failed{suffix}. "
-        f"Inspect `halios eval report {run_id} --failures --json`."
+        f"Inspect `halios eval report {run_id} --failures --json`.{review}"
+    )
+
+
+def _representative_trace_id(report: dict[str, Any]) -> str | None:
+    for trial in report.get("trials") or []:
+        if isinstance(trial, dict) and trial.get("trace_id"):
+            return str(trial["trace_id"])
+    return None
+
+
+def _evaluation_links(*, base_url: str, agent_id: str, report: dict[str, Any]) -> dict[str, str]:
+    return halios_ui_links(
+        base_url,
+        agent_id,
+        include_evaluations=True,
+        run_tag=str(report.get("run_tag") or "") or None,
+        trace_id=_representative_trace_id(report),
     )
 
 
@@ -1028,6 +1049,9 @@ def run(
                 f"Evaluation run {run_id} did not finish within {timeout}s. "
                 f"Inspect `halios eval report {run_id} --failures --json`."
             )
+        report["links"] = _evaluation_links(
+            base_url=credentials.ui_base_url, agent_id=agent_id, report=report
+        )
         _raise_for_failed_run(report, run_id)
         if expected_roots:
             report["telemetry_verification"] = _verify_simulation_telemetry(
@@ -1047,6 +1071,7 @@ def run(
         if telemetry.get("verified"):
             typer.echo(f"Telemetry: verified ({telemetry['trace_count']} traces)")
         typer.echo(f"Run {run_id}: pass@{k}={pass_at_k:.1%} gate={gate}")
+        emit_review_links(report["links"])
     if not report.get("gate_passed"):
         raise typer.Exit(2)
 
@@ -1072,6 +1097,9 @@ def report(
             **result,
             "trials": [item for item in result.get("trials", []) if not item.get("passed")],
         }
+    result["links"] = _evaluation_links(
+        base_url=credentials.ui_base_url, agent_id=agent_id, report=result
+    )
     if json_output:
         typer.echo(json.dumps(result, indent=2, sort_keys=True))
     else:
@@ -1086,3 +1114,4 @@ def report(
             f"trial_failures={int(result.get('evaluation_failed_count') or 0)} "
             f"revision={result.get('report_revision')}{delta}"
         )
+        emit_review_links(result["links"])

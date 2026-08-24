@@ -19,6 +19,8 @@ candidate. There is no SDK optimizer or separate optimization target server.
      --json
    ```
 
+   Preserve `links.optimization_run` from the result and include it in progress and final summaries.
+
 4. Read `guidance.mutation_contract`. Diagnose the sampled failures against code and the current
    prompt. If the failure requires a tool, retrieval, schema, or control-flow change, cancel the
    optimization and fix code directly. Otherwise make exactly one focused prompt edit within the
@@ -52,3 +54,4 @@ candidate. There is no SDK optimizer or separate optimization target server.
 Verification requires the same suite digest and trial count, complete telemetry, no check errors or
 protected-check failures, a passing reliability gate, and no pass@k regression. Keep the prompt
 change only after verification passes; otherwise restore the baseline prompt and report the reasons.
+Include the CLI-provided optimization run and final evaluation run links in the verification summary.

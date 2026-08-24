@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Adds structured, credential-free Halios UI links to project, evaluation, trace, and optimization
+  CLI results and surfaces them as optional human-review handoffs in the Agent Skill.
 - Bounds Agent Skill setup to one verified smoke scenario and requires explicit user authorization
   and a chosen trial count before a full evaluation.
 - Separates run, diagnose, and fix intents so they do not enter an open-ended repair loop.

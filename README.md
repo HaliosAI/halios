@@ -33,7 +33,8 @@ Prompt your agent to set up evaluations for your project:
 
 Your agent will inspect your application entrypoint, configure standard OpenTelemetry, draft
 scenarios in `.halios/`, and run one smoke scenario. It stops with a verification summary before
-asking whether to run the full suite and how many trials per scenario to use.
+asking whether to run the full suite and how many trials per scenario to use. The summary includes
+direct Halios UI links for reviewing the materialized suite, smoke run, and trace evidence.
 
 ---
 
@@ -43,14 +44,18 @@ If you prefer to drive evaluations directly from the command line or CI:
 
 ```bash
 # Recommended: Install with uv tool
-uv tool install 'haliosai-cli>=2.0.0'
+uv tool install 'haliosai-cli>=2.0.6'
 
 # Or install with pipx
-pipx install 'haliosai-cli>=2.0.0'
+pipx install 'haliosai-cli>=2.0.6'
 
 # See available commands and usage
 halios --help
 ```
+
+The API and UI use the same origin by default. For a self-hosted deployment with separate origins,
+set `HALIOS_UI_URL` so structured review links point to the web application without changing the
+API endpoint used by `HALIOS_BASE_URL`.
 
 ---
 
