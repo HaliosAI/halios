@@ -10,6 +10,7 @@ import platform
 import re
 import subprocess
 import tempfile
+import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -29,6 +30,77 @@ class ApiError(typer.BadParameter):
 
 def normalize_url(value: str) -> str:
     return (value if "://" in value else f"http://{value}").rstrip("/")
+
+
+def _ui_origin(base_url: str) -> str:
+    """Return a credential-free origin suitable for links shown to users."""
+    parsed = urllib.parse.urlsplit(normalize_url(base_url))
+    hostname = parsed.hostname
+    if parsed.scheme not in {"http", "https"} or not hostname:
+        raise typer.BadParameter(f"Invalid Halios base URL: {base_url}")
+    rendered_host = f"[{hostname}]" if ":" in hostname else hostname
+    if parsed.port is not None:
+        rendered_host = f"{rendered_host}:{parsed.port}"
+    return urllib.parse.urlunsplit((parsed.scheme, rendered_host, "", "", ""))
+
+
+def halios_ui_links(
+    base_url: str,
+    agent_id: str,
+    *,
+    include_suite: bool = False,
+    include_evaluations: bool = False,
+    run_tag: str | None = None,
+    trace_id: str | None = None,
+    optimization_run_id: str | None = None,
+) -> dict[str, str]:
+    """Build stable, secret-free Halios UI review links for durable resources."""
+    if not agent_id:
+        return {}
+    origin = _ui_origin(base_url)
+    encoded_agent = urllib.parse.quote(agent_id, safe="")
+    agent_path = f"{origin}/agents/{encoded_agent}"
+    links = {"agent": agent_path}
+    if include_suite:
+        links["scenarios"] = (
+            f"{agent_path}/evaluations?{urllib.parse.urlencode({'tab': 'scenarios'})}"
+        )
+        links["rules"] = f"{agent_path}/evaluations?{urllib.parse.urlencode({'tab': 'rules'})}"
+    if include_evaluations or run_tag:
+        links["evaluations"] = f"{agent_path}/evaluations"
+    if run_tag:
+        encoded_run_tag = urllib.parse.quote(run_tag, safe="")
+        links["evaluation_run"] = f"{agent_path}/evaluations/{encoded_run_tag}"
+        links["evaluation_traces"] = (
+            f"{agent_path}/traces?{urllib.parse.urlencode({'eval_run': run_tag})}"
+        )
+    if trace_id:
+        links["trace"] = f"{agent_path}/traces/{urllib.parse.quote(trace_id, safe='')}"
+    if optimization_run_id:
+        encoded_run_id = urllib.parse.quote(optimization_run_id, safe="")
+        links["optimization_run"] = f"{agent_path}/optimize/{encoded_run_id}"
+    return links
+
+
+_LINK_LABELS = {
+    "agent": "Agent overview",
+    "scenarios": "Scenarios",
+    "rules": "Rules and rubrics",
+    "evaluations": "Evaluation runs",
+    "evaluation_run": "Evaluation run",
+    "evaluation_traces": "Run traces",
+    "trace": "Trace evidence",
+    "optimization_run": "Optimization run",
+}
+
+
+def emit_review_links(links: dict[str, str]) -> None:
+    """Print a compact human-review handoff without making UI usage mandatory."""
+    if not links:
+        return
+    typer.echo("Review in Halios:")
+    for key, url in links.items():
+        typer.echo(f"- {_LINK_LABELS.get(key, key.replace('_', ' ').title())}: {url}")
 
 
 def credentials_path() -> pathlib.Path:
@@ -77,6 +149,7 @@ def save_profile(
     *,
     base_url: str,
     api_key: str,
+    ui_base_url: str | None = None,
     organization_id: str | None = None,
     api_key_id: int | None = None,
     expires_at: str | None = None,
@@ -87,6 +160,7 @@ def save_profile(
     profiles[profile] = {
         **previous,
         "base_url": normalize_url(base_url),
+        "ui_base_url": normalize_url(ui_base_url or base_url),
         "api_key": api_key,
         "organization_id": organization_id,
         "api_key_id": api_key_id,
@@ -117,6 +191,7 @@ def save_agent_ingest_token(profile: str, agent_id: str, token: str) -> None:
 class Credentials:
     profile: str
     base_url: str
+    ui_base_url: str
     api_key: str
     organization_id: str | None
     otlp_token: str | None = None
@@ -133,6 +208,9 @@ def stored_profile_credentials(profile: str = "default") -> Credentials | None:
     return Credentials(
         profile=profile,
         base_url=normalize_url(str(entry.get("base_url") or DEFAULT_BASE_URL)),
+        ui_base_url=normalize_url(
+            str(entry.get("ui_base_url") or entry.get("base_url") or DEFAULT_BASE_URL)
+        ),
         api_key=str(entry["api_key"]),
         organization_id=entry.get("organization_id"),
         api_key_id=raw_key_id if isinstance(raw_key_id, int) else None,
@@ -150,6 +228,10 @@ def resolve_credentials(profile: str = "default", agent_id: str | None = None) -
     base_url = normalize_url(
         os.getenv("HALIOS_BASE_URL") or str(entry.get("base_url") or DEFAULT_BASE_URL)
     )
+    ui_base_url = normalize_url(
+        os.getenv("HALIOS_UI_URL")
+        or str(entry.get("ui_base_url") or entry.get("base_url") or base_url)
+    )
     # INTENT: CI runners need both control-plane and agent-scoped ingest credentials without
     # writing a persistent profile to the ephemeral filesystem.
     token = os.getenv("HALIOS_OTLP_TOKEN")
@@ -160,6 +242,7 @@ def resolve_credentials(profile: str = "default", agent_id: str | None = None) -
     return Credentials(
         profile=profile,
         base_url=base_url,
+        ui_base_url=ui_base_url,
         api_key=env_key or str(entry.get("api_key") or ""),
         organization_id=entry.get("organization_id"),
         otlp_token=token,

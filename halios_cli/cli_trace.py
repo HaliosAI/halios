@@ -7,7 +7,13 @@ import re
 
 import typer
 
-from .cli_support import ApiClient, load_project_config, resolve_credentials
+from .cli_support import (
+    ApiClient,
+    emit_review_links,
+    halios_ui_links,
+    load_project_config,
+    resolve_credentials,
+)
 
 app = typer.Typer(help="Inspect trace evidence and production failures.", no_args_is_help=True)
 
@@ -23,7 +29,17 @@ def _emit(value: object, json_output: bool) -> None:
     if json_output:
         typer.echo(json.dumps(value, indent=2, sort_keys=True, default=str))
     else:
-        items = value.get("data", value) if isinstance(value, dict) else value
+        links = value.get("links") if isinstance(value, dict) else None
+        display_value = (
+            {key: item for key, item in value.items() if key != "links"}
+            if isinstance(value, dict)
+            else value
+        )
+        items = (
+            display_value.get("data", display_value)
+            if isinstance(display_value, dict)
+            else display_value
+        )
         if isinstance(items, list):
             for item in items:
                 if isinstance(item, dict):
@@ -33,7 +49,9 @@ def _emit(value: object, json_output: bool) -> None:
                         )
                     )
         else:
-            typer.echo(json.dumps(value, indent=2, default=str))
+            typer.echo(json.dumps(display_value, indent=2, default=str))
+        if isinstance(links, dict):
+            emit_review_links(links)
 
 
 @app.command("list")
@@ -57,7 +75,7 @@ def show(
     include: str = typer.Option("spans,checks", "--include"),
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     with ApiClient(credentials) as api:
         result = api.request("GET", f"/api/v1/traces/{trace_id}")
     allowed = {item.strip() for item in include.split(",") if item.strip()}
@@ -66,6 +84,7 @@ def show(
             result.pop("spans", None)
         if "checks" not in allowed:
             result.pop("check_executions", None)
+        result["links"] = halios_ui_links(credentials.ui_base_url, agent_id, trace_id=trace_id)
     _emit(result, json_output)
 
 
@@ -122,7 +141,7 @@ def verify(
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Fail closed unless a stored runtime trace has usable standard OTel evidence."""
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     with ApiClient(credentials) as api:
         detail = api.request("GET", f"/api/v1/traces/{trace_id}")
     spans = detail.get("spans") or []
@@ -169,6 +188,7 @@ def verify(
         "span_count": len(spans),
         "root_count": len(roots),
         "issues": issues,
+        "links": halios_ui_links(credentials.ui_base_url, agent_id, trace_id=trace_id),
     }
     _emit(result, json_output)
     if issues:

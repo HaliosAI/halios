@@ -11,10 +11,10 @@ description: >
   reliability, inspect a failed trace, turn failures into regression tests, add AI-agent CI gates,
   configure Halios guardrails, or optimize an agent prompt—even when they do not name Halios.
 license: Apache-2.0
-compatibility: Requires shell access and Python 3.10+ to install and run haliosai-cli 2.0 or newer.
+compatibility: Requires shell access and Python 3.10+ to install and run haliosai-cli 2.0.6 or newer.
 metadata:
-  version: "2.0.5"
-  min_halios_cli: "2.0.5"
+  version: "2.0.6"
+  min_halios_cli: "2.0.6"
 ---
 
 # Halios agent reliability
@@ -100,6 +100,10 @@ permission to enter an open-ended repair loop.
   Halios Managed is ready by default, so onboarding must not pause for provider setup.
   `halios project check` must report `Evaluation AI: ready (Halios Managed)` or the explicitly
   selected custom model. BYOK is optional and configured directly by an organization owner.
+- Treat Halios UI links as optional human-review handoffs. Use only the URLs returned in the CLI
+  `links` object; never guess frontend routes or embed credentials. The repository and CLI remain
+  sufficient for execution, while the UI helps the user inspect persistent scenarios, rubrics,
+  runs, traces, and optimization evidence.
 
 ## Diagnose in code terms
 
@@ -131,3 +135,12 @@ Finish when the requested scope is verified, not when every possible reliability
 
 If evaluation AI remains unavailable, report Halios's structured remediation and stop the
 onboarding or eval workflow.
+
+## Review handoff
+
+At the end of a completed workflow, include a compact **Review in Halios** section using the most
+relevant CLI-provided links. Prefer the exact run, trace, or optimization link over a collection
+page, include no more than five links, and do not require the user to open them. For setup, include
+the agent, scenarios, rules/rubrics, smoke run, and representative trace when returned. For a run or
+diagnosis, include the exact run and trace evidence. Explain in one sentence what the user can
+verify there.

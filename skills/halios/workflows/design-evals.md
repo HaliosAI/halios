@@ -64,10 +64,11 @@ this skill, not an optional external dependency.
    outcome-vs-example generality, one criterion per rubric, and positive/negative scenario evidence.
    Show the user the resulting contract when it contains business judgments that require
    confirmation. A schema-valid suite is not automatically a meaningful suite.
-8. Run `halios project configure`. It atomically creates one persistent server revision containing
+8. Run `halios project configure --json`. It atomically creates one persistent server revision containing
    both checks/rules and scenarios, then rewrites both YAML files from the canonical response. Do
    not continue unless the command reports materialization verified with the expected check, rule,
-   rubric, and scenario counts.
+   rubric, and scenario counts. Preserve the CLI-provided `links.scenarios` and `links.rules` for
+   the final review handoff so the user can inspect the materialized suite in Halios.
 9. If configure reports a revision conflict, note the recovery location, accept the automatic
    server-to-local refresh, compare the rejected proposal with the refreshed checkout, and reapply
    intended changes against the new revision. Never restore the rejected files wholesale.

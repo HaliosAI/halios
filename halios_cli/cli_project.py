@@ -17,8 +17,10 @@ import typer
 from .cli_support import (
     ApiClient,
     ApiError,
+    emit_review_links,
     evaluation_suite_digest,
     git_provenance,
+    halios_ui_links,
     load_project_config,
     load_yaml,
     preserve_suite_recovery,
@@ -92,6 +94,7 @@ def init(
     command: str = typer.Option(
         "", "--command", help="Project adapter command; may be added later by the coding agent."
     ),
+    json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Create a fresh agent, or explicitly link one by UUID, and initialize the checkout."""
     root = pathlib.Path.cwd().resolve()
@@ -167,16 +170,37 @@ def init(
         created.append(".halios/scenarios.yml")
 
     verb = "Created" if created_agent else "Linked"
-    typer.echo(f"{verb} Halios agent: {resolved_agent['name']}")
-    typer.echo(f"Agent ID: {resolved_agent['id']}")
-    typer.echo(f"Agent URL: {credentials.base_url}/agents/{resolved_agent['id']}")
-    if not created_agent:
+    links = halios_ui_links(credentials.ui_base_url, str(resolved_agent["id"]))
+    result = {
+        "created": created_agent,
+        "agent": {
+            "id": str(resolved_agent["id"]),
+            "name": str(resolved_agent["name"]),
+            "slug": str(resolved_agent["slug"]),
+        },
+        "suite": {
+            "revision": int(suite.get("revision") or 0),
+            "check_count": len((suite.get("eval") or {}).get("checks") or []),
+            "scenario_count": len((suite.get("scenarios") or {}).get("scenarios") or []),
+        },
+        "created_files": created,
+        "links": links,
+    }
+    if json_output:
+        typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        typer.echo(f"{verb} Halios agent: {resolved_agent['name']}")
+        typer.echo(f"Agent ID: {resolved_agent['id']}")
+        if not created_agent:
+            typer.echo(
+                f"Existing evaluation suite: revision {suite['revision']}, "
+                f"{result['suite']['check_count']} checks, "
+                f"{result['suite']['scenario_count']} scenarios"
+            )
         typer.echo(
-            f"Existing evaluation suite: revision {suite['revision']}, "
-            f"{len((suite.get('eval') or {}).get('checks') or [])} checks, "
-            f"{len((suite.get('scenarios') or {}).get('scenarios') or [])} scenarios"
+            "Created: " + ", ".join(created) if created else "Project was already initialized."
         )
-    typer.echo("Created: " + ", ".join(created) if created else "Project was already initialized.")
+        emit_review_links(links)
 
 
 def _apply_suite_response(root: pathlib.Path, response: dict[str, Any]) -> None:
@@ -244,6 +268,7 @@ def configure(json_output: bool = typer.Option(False, "--json")) -> None:
         "revision": response["revision"],
         "digest": response.get("digest"),
         "verification": verification,
+        "links": halios_ui_links(credentials.ui_base_url, agent_id, include_suite=True),
     }
     if json_output:
         typer.echo(json.dumps(result, indent=2, sort_keys=True))
@@ -253,6 +278,7 @@ def configure(json_output: bool = typer.Option(False, "--json")) -> None:
             f"{verification['check_count']} checks, {verification['rule_count']} rules, "
             f"{verification['rubric_count']} rubrics, {verification['scenario_count']} scenarios"
         )
+        emit_review_links(result["links"])
 
 
 @app.command("refresh")
@@ -261,10 +287,12 @@ def refresh() -> None:
     root, config = load_project_config()
     agent_id = str((config.get("agent") or {}).get("id") or "")
     profile = str(config.get("profile") or "default")
-    with ApiClient(resolve_credentials(profile, agent_id)) as api:
+    credentials = resolve_credentials(profile, agent_id)
+    with ApiClient(credentials) as api:
         response = api.request("GET", f"/api/v1/agents/{agent_id}/evaluation-suite")
     _apply_suite_response(root, response)
     typer.echo(f"Refreshed evaluation suite revision {response['revision']} from Halios")
+    emit_review_links(halios_ui_links(credentials.ui_base_url, agent_id, include_suite=True))
 
 
 @app.command("check")
@@ -345,6 +373,7 @@ def check(
         "git": {"branch": branch, "commit": commit, "dirty": dirty == "true"},
         "evaluation_ai": evaluation_status,
         "suite": {"verified": True, "revision": suite["revision"]},
+        "links": halios_ui_links(credentials.ui_base_url, agent_id, include_suite=True),
     }
     if json_output:
         typer.echo(json.dumps(result, indent=2, sort_keys=True))
@@ -355,6 +384,7 @@ def check(
         typer.echo(f"Git: {branch}@{commit} dirty={dirty}")
         typer.echo(f"Evaluation AI: {evaluation_status}")
         typer.echo(f"Evaluation suite: verified (revision {suite['revision']})")
+        emit_review_links(result["links"])
 
 
 @app.command("instrumentation")

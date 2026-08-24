@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
 import sys
+from types import SimpleNamespace
 from typing import Any
 
+import pytest
+import typer
 from typer.testing import CliRunner
 
-from halios_cli import cli_support, cli_trace
+from halios_cli import cli_project, cli_support, cli_trace
 from halios_cli.cli import app
 from halios_cli.cli_eval import _invoke_adapter, _otlp_root_payload, _scenario_schema_errors
 
@@ -30,7 +34,8 @@ class FakeApiClient:
 
 def _patch_trace_context(monkeypatch) -> None:
     FakeApiClient.calls = []
-    monkeypatch.setattr(cli_trace, "_context", lambda: ("agent-id", object()))
+    credentials = SimpleNamespace(ui_base_url="https://app.halios.ai")
+    monkeypatch.setattr(cli_trace, "_context", lambda: ("agent-id", credentials))
     monkeypatch.setattr(cli_trace, "ApiClient", FakeApiClient)
 
 
@@ -46,12 +51,96 @@ def test_ci_credentials_accept_agent_scoped_otlp_token_from_environment(monkeypa
     monkeypatch.setenv("HALIOS_API_KEY", "halios_control_plane_key")
     monkeypatch.setenv("HALIOS_OTLP_TOKEN", "halios_agent_ingest_token")
     monkeypatch.setenv("HALIOS_BASE_URL", "https://api.halios.ai")
+    monkeypatch.setenv("HALIOS_UI_URL", "https://app.halios.ai")
 
     credentials = cli_support.resolve_credentials(agent_id="agent-id")
 
     assert credentials.api_key == "halios_control_plane_key"
     assert credentials.otlp_token == "halios_agent_ingest_token"
     assert credentials.base_url == "https://api.halios.ai"
+    assert credentials.ui_base_url == "https://app.halios.ai"
+
+
+def test_ui_links_are_encoded_and_strip_credentials() -> None:
+    links = cli_support.halios_ui_links(
+        "https://user:secret@app.halios.ai/api?token=do-not-copy",
+        "agent/id",
+        include_suite=True,
+        run_tag="run:hello world",
+        trace_id="1" * 32,
+        optimization_run_id="opt/id",
+    )
+
+    assert links["agent"] == "https://app.halios.ai/agents/agent%2Fid"
+    assert links["scenarios"].endswith("/evaluations?tab=scenarios")
+    assert links["rules"].endswith("/evaluations?tab=rules")
+    assert links["evaluation_run"].endswith("/evaluations/run%3Ahello%20world")
+    assert links["evaluation_traces"].endswith("/traces?eval_run=run%3Ahello+world")
+    assert links["optimization_run"].endswith("/optimize/opt%2Fid")
+    assert "secret" not in "\n".join(links.values())
+    assert "token" not in "\n".join(links.values())
+
+
+def test_ui_links_require_agent_identity() -> None:
+    assert cli_support.halios_ui_links("https://app.halios.ai", "") == {}
+
+    with pytest.raises(typer.BadParameter, match="Invalid Halios base URL"):
+        cli_support.halios_ui_links("ftp://app.halios.ai", "agent-id")
+
+
+def test_project_init_json_returns_agent_review_link(monkeypatch, tmp_path) -> None:
+    agent_id = "11111111-1111-4111-8111-111111111111"
+    credentials = SimpleNamespace(
+        base_url="https://api.halios.ai",
+        ui_base_url="https://app.halios.ai",
+        otlp_token="stored-token",
+    )
+
+    class InitApi:
+        def __init__(self, _credentials: object) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def request(self, method: str, path: str, **_kwargs):
+            if method == "GET" and path == "/api/v1/ai/capability":
+                return {"evaluation_available": True}
+            if method == "POST" and path == "/api/v1/agents":
+                return {"id": agent_id, "name": "Support agent", "slug": "support-agent"}
+            if path == f"/api/v1/agents/{agent_id}/evaluation-suite":
+                return {
+                    "revision": 0,
+                    "digest": "",
+                    "eval": {},
+                    "scenarios": {"version": 1, "scenarios": []},
+                }
+            raise AssertionError(f"Unexpected request: {method} {path}")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli_project, "resolve_credentials", lambda *_args: credentials)
+    monkeypatch.setattr(cli_project, "ApiClient", InitApi)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "project",
+            "init",
+            "--agent",
+            "Support agent",
+            "--command",
+            "python adapter.py",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["agent"]["id"] == agent_id
+    assert payload["links"]["agent"] == f"https://app.halios.ai/agents/{agent_id}"
 
 
 def test_trace_list_uses_backend_traffic_scope(monkeypatch) -> None:
@@ -100,6 +189,7 @@ def test_trace_verify_accepts_complete_root(monkeypatch) -> None:
     result = CliRunner().invoke(app, ["trace", "verify", trace_id, "--json"])
     assert result.exit_code == 0
     assert '"verified": true' in result.output
+    assert '"trace": "https://app.halios.ai/agents/agent-id/traces/' in result.output
 
 
 def test_cli_root_span_uses_standard_genai_message_parts() -> None:

@@ -8,7 +8,14 @@ from typing import Any
 
 import typer
 
-from .cli_support import ApiClient, atomic_write_text, load_project_config, resolve_credentials
+from .cli_support import (
+    ApiClient,
+    atomic_write_text,
+    emit_review_links,
+    halios_ui_links,
+    load_project_config,
+    resolve_credentials,
+)
 
 app = typer.Typer(
     help="Guide, record, and verify coding-agent prompt optimization.",
@@ -27,7 +34,16 @@ def _emit(value: dict[str, Any], json_output: bool) -> None:
     if json_output:
         typer.echo(json.dumps(value, indent=2, sort_keys=True, default=str))
     else:
-        typer.echo(json.dumps(value, indent=2, default=str))
+        links = value.get("links")
+        typer.echo(
+            json.dumps(
+                {key: item for key, item in value.items() if key != "links"},
+                indent=2,
+                default=str,
+            )
+        )
+        if isinstance(links, dict):
+            emit_review_links(links)
 
 
 def _resolve_baseline(api: ApiClient, agent_id: str, explicit_run_id: str | None) -> dict[str, Any]:
@@ -149,6 +165,12 @@ def start(
             f"`halios optimize record {run_id} --evaluation-run <run-id> "
             f"--prompt-file {prompt_file}`."
         ),
+        "links": halios_ui_links(
+            credentials.ui_base_url,
+            agent_id,
+            run_tag=str(baseline.get("run_tag") or "") or None,
+            optimization_run_id=run_id,
+        ),
     }
     _emit(result, json_output)
 
@@ -156,9 +178,10 @@ def start(
 @app.command("guidance")
 def guidance(run_id: str, json_output: bool = typer.Option(False, "--json")) -> None:
     """Return the next bounded edit contract and negative memory for a coding agent."""
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     with ApiClient(credentials) as api:
         result = api.request("POST", f"/api/v1/optimization-runs/{run_id}/next-action")
+    result["links"] = halios_ui_links(credentials.ui_base_url, agent_id, optimization_run_id=run_id)
     _emit(result, json_output)
 
 
@@ -170,7 +193,7 @@ def record(
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Record one candidate using evidence from the unchanged canonical eval suite."""
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     prompt_after = prompt_file.read_text(encoding="utf-8")
     with ApiClient(credentials) as api:
         run = api.request("GET", f"/api/v1/optimization-runs/{run_id}")
@@ -229,6 +252,12 @@ def record(
             if accepted
             else "Revert the rejected prompt edit, inspect next_action, and try one different edit."
         ),
+        "links": halios_ui_links(
+            credentials.ui_base_url,
+            agent_id,
+            run_tag=str(report.get("run_tag") or "") or None,
+            optimization_run_id=run_id,
+        ),
     }
     _emit(result, json_output)
     if not accepted:
@@ -242,7 +271,7 @@ def apply_candidate(
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Retrieve one backend-approved prompt candidate for repository application."""
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     with ApiClient(credentials) as api:
         handoff = api.request(
             "POST",
@@ -256,6 +285,11 @@ def apply_candidate(
     handoff["next"] = (
         "Run `halios eval run --json` after applying the prompt, then use "
         f"`halios optimize verify {handoff['optimization_run_id']} --evaluation-run <run-id>`."
+    )
+    handoff["links"] = halios_ui_links(
+        credentials.ui_base_url,
+        agent_id,
+        optimization_run_id=str(handoff["optimization_run_id"]),
     )
     if json_output:
         _emit(handoff, True)
@@ -272,13 +306,14 @@ def verify_candidate(
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Verify the applied candidate against the frozen baseline and unchanged suite."""
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     with ApiClient(credentials) as api:
         result = api.request(
             "POST",
             f"/api/v1/optimization-runs/{run_id}/verify",
             json={"evaluation_run_id": evaluation_run_id},
         )
+    result["links"] = halios_ui_links(credentials.ui_base_url, agent_id, optimization_run_id=run_id)
     _emit(result, json_output)
     if not result.get("passed"):
         raise typer.Exit(2)
@@ -294,15 +329,17 @@ def list_runs(json_output: bool = typer.Option(False, "--json")) -> None:
 
 @app.command("status")
 def status(run_id: str, json_output: bool = typer.Option(False, "--json")) -> None:
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     with ApiClient(credentials) as api:
         result = api.request("GET", f"/api/v1/optimization-runs/{run_id}")
+    result["links"] = halios_ui_links(credentials.ui_base_url, agent_id, optimization_run_id=run_id)
     _emit(result, json_output)
 
 
 @app.command("cancel")
 def cancel(run_id: str, json_output: bool = typer.Option(False, "--json")) -> None:
-    _agent_id, credentials = _context()
+    agent_id, credentials = _context()
     with ApiClient(credentials) as api:
         result = api.request("POST", f"/api/v1/optimization-runs/{run_id}/cancel")
+    result["links"] = halios_ui_links(credentials.ui_base_url, agent_id, optimization_run_id=run_id)
     _emit(result, json_output)

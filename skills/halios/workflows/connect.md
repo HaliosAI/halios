@@ -17,9 +17,9 @@ Halios connects to repositories using a clean two-tier separation:
 ## Steps
 
 1. Inspect the agent entrypoint, prompt/tool definitions, runtime, and current OpenTelemetry setup.
-2. Run `halios --version` and require version 2.0 or newer. If the CLI is absent or older, install or
-   replace it as an isolated user-level tool with `uv tool install 'haliosai-cli>=2.0.0'` when `uv`
-   is available, otherwise `pipx install --force 'haliosai-cli>=2.0.0'`. If neither tool is
+2. Run `halios --version` and require version 2.0.6 or newer. If the CLI is absent or older, install or
+   replace it as an isolated user-level tool with `uv tool install 'haliosai-cli>=2.0.6'` when `uv`
+   is available, otherwise `pipx install --force 'haliosai-cli>=2.0.6'`. If neither tool is
    present, explain that Python 3.10+ and an isolated Python application installer are required
    instead of modifying the application's virtual environment. Do not add the CLI to the
    application's runtime dependencies. If the package index cannot resolve version 2.0 or newer,
@@ -28,11 +28,12 @@ Halios connects to repositories using a clean two-tier separation:
 3. Run `halios auth status`. If credentials are absent, run `halios auth login`; do not write them to
    the project or ask the user to paste them into chat.
 4. Choose a display name for a fresh agent. Run
-   `halios project init --agent <new-name> --command '<adapter-command>'`. Never reuse an agent by
+   `halios project init --agent <new-name> --command '<adapter-command>' --json`. Never reuse an agent by
    name or slug. Use `--link-agent <uuid>` only when the user explicitly requests existing state.
 5. Project initialization must report that a newly created agent has suite revision `0`, zero
    checks, and zero scenarios. Immediately tell the user the agent display name, UUID, and dashboard
-   URL printed by the CLI; repeat all three in the final onboarding summary.
+   URL from the CLI `links` object; repeat all three in the final onboarding summary. Do not
+   construct the URL from the agent id yourself.
    Project initialization uses Halios Managed AI by default and must not open provider setup or ask
    for a key. A previously selected custom model is used when configured by the organization.
 6. Read [the instrumentation contract](../references/instrumentation-contract.md) and
