@@ -28,10 +28,12 @@ npx skills add HaliosAI/halios --skill halios
 Prompt your agent to set up evaluations for your project:
 
 ```text
-"Set up evals for this agent: inspect the repository, create realistic test scenarios and checks, and run a baseline."
+"Set up evals for this agent: inspect the repository, create realistic test scenarios and checks, run one smoke test, and summarize before asking whether to run the full suite."
 ```
 
-Your agent will inspect your application entrypoint, configure standard OpenTelemetry, draft scenarios in `.halios/`, and run baseline evaluations.
+Your agent will inspect your application entrypoint, configure standard OpenTelemetry, draft
+scenarios in `.halios/`, and run one smoke scenario. It stops with a verification summary before
+asking whether to run the full suite and how many trials per scenario to use.
 
 ---
 

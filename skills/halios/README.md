@@ -35,6 +35,11 @@ After installation, ask the harness to set up Halios, evaluate an agent, add rel
 inspect a failed trace, configure guardrails, or optimize a prompt. Restart the harness only if it
 does not discover newly installed skills automatically.
 
+A setup request configures the suite and runs one smoke scenario, then stops with a verification
+summary. The harness asks before running the full suite so the user can choose the number of trials
+per scenario. Running, diagnosing, and fixing are separate scopes; none implicitly starts an
+open-ended repair loop.
+
 ## Local development
 
 Install directly from a checkout so the Skills CLI exercises the same discovery path as users:

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Bounds Agent Skill setup to one verified smoke scenario and requires explicit user authorization
+  and a chosen trial count before a full evaluation.
+- Separates run, diagnose, and fix intents so they do not enter an open-ended repair loop.
+
 ## 2.0.1
 
 - Updates documentation, branding, and pair-programmer narrative.
