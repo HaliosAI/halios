@@ -4,13 +4,13 @@
     {
       "id": 1,
       "prompt": "Setup agent evaluation for this project using Halios.",
-      "expected_output": "Inspects the agent, installs the Halios CLI if missing, uses separate auth/project setup, writes only the three-file skeleton, configures stock OTel plus a jsonl-v1 adapter, authors evals/scenarios, and smoke-tests a fresh run.",
+      "expected_output": "Inspects the agent, installs the Halios CLI if missing, uses separate auth/project setup, writes only the three-file skeleton, configures stock OTel plus a jsonl-v1 adapter, authors evals/scenarios, and runs exactly one fresh k=1 smoke scenario. It then summarizes the agent, suite, run, trace, telemetry, and check evidence; stops without running the full bank or editing agent behavior; and asks whether to run the full suite with a user-selected trial count.",
       "files": []
     },
     {
       "id": 2,
       "prompt": "This production trace failed. Turn it into a regression and fix the agent: 0123456789abcdef0123456789abcdef",
-      "expected_output": "Retrieves stable JSON evidence, generates a scenario from intent rather than replaying assistant output, fixes code, and reruns the failure plus protected scenarios.",
+      "expected_output": "Retrieves stable JSON evidence, generates a scenario from intent rather than replaying assistant output, makes one focused code change, reruns the failure plus protected scenarios once, then summarizes and stops instead of entering another repair cycle.",
       "files": []
     },
     {
@@ -47,6 +47,24 @@
       "id": 8,
       "prompt": "Why is the release blocked? The GitHub Halios check is red.",
       "expected_output": "Inspects the GitHub run and immutable Halios run report, identifies whether setup, adapter, telemetry, check execution, protected behavior, threshold, or trusted publication caused the block, cites the relevant IDs and fields, and recommends a focused fix rather than a blind rerun.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Set up Halios evals for this customer-support agent. Configure everything and prove the integration works, but I have not decided how large the full evaluation should be.",
+      "expected_output": "Completes setup and exactly one k=1 smoke scenario, reports verification evidence, and stops. It does not infer a full-suite trial count, run the bank, inspect behavioral failures beyond the smoke summary, or modify the prompt/code. It asks whether to run the full suite and how many trials per scenario to use.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "The Halios suite is already configured. Run the full evaluation with four trials per scenario and tell me what failed.",
+      "expected_output": "Runs halios eval run -k 4 exactly once, retrieves and reports failure evidence, and stops without modifying the agent or rerunning. It does not substitute the default k=3 or begin a repair loop.",
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "Diagnose why this Halios run failed and recommend what we should change: run_123.",
+      "expected_output": "Retrieves the run, scenario, and trace/check evidence; explains the likely cause and recommends a focused change; and stops without editing files or starting another evaluation.",
       "files": []
     }
   ]
