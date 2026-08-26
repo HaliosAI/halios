@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 import sys
 from types import SimpleNamespace
 from typing import Any
@@ -11,7 +12,12 @@ from typer.testing import CliRunner
 
 from halios_cli import cli_project, cli_support, cli_trace
 from halios_cli.cli import app
-from halios_cli.cli_eval import _invoke_adapter, _otlp_root_payload, _scenario_schema_errors
+from halios_cli.cli_eval import (
+    _eval_schema_errors,
+    _invoke_adapter,
+    _otlp_root_payload,
+    _scenario_schema_errors,
+)
 
 
 class FakeApiClient:
@@ -44,6 +50,22 @@ def test_top_level_exposes_agent_workflows() -> None:
     assert result.exit_code == 0
     assert "optimize" in result.output
     assert "trace" in result.output
+
+
+def test_bundled_eval_example_is_valid_and_balanced() -> None:
+    root = pathlib.Path(__file__).resolve().parents[1]
+    example = cli_support.load_yaml(root / "skills/halios/assets/eval.example.yml")
+
+    assert _eval_schema_errors(example) == []
+    checks = example["checks"]
+    rule_types = {rule["type"] for check in checks for rule in check["rules"]}
+    target_scopes = {(check["target"], check["scope"]) for check in checks}
+
+    assert {"exists", "json_schema", "not_empty", "one_of", "regex", "llm_judge"} <= rule_types
+    assert ("tool_usage", "input_arguments") in target_scopes
+    assert ("assistant_message", "all") in target_scopes
+    assert ("assistant_message", "after_tool") in target_scopes
+    assert ("full_conversation", "entire") in target_scopes
 
 
 def test_ci_credentials_accept_agent_scoped_otlp_token_from_environment(monkeypatch) -> None:
