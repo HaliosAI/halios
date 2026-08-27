@@ -48,10 +48,10 @@ If you prefer to drive evaluations directly from the command line or CI:
 
 ```bash
 # Recommended: Install with uv tool
-uv tool install 'haliosai-cli>=2.0.6'
+uv tool install 'haliosai-cli>=2.0.7'
 
 # Or install with pipx
-pipx install 'haliosai-cli>=2.0.6'
+pipx install 'haliosai-cli>=2.0.7'
 
 # See available commands and usage
 halios --help

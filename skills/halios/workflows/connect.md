@@ -17,16 +17,16 @@ Halios connects to repositories using a clean two-tier separation:
 ## Steps
 
 1. Inspect the agent entrypoint, prompt/tool definitions, runtime, and current OpenTelemetry setup.
-2. Run `halios --version` and require version 2.0.6 or newer. If the CLI is absent or older, tell the
+2. Run `halios --version` and require version 2.0.7 or newer. If the CLI is absent or older, tell the
    user before installing it:
 
    > The Halios CLI is not installed. I'll install `haliosai-cli` for your user account so it can be
    > reused across projects. It will not be added to this project's runtime dependencies.
 
    Then request approval for the user-level installation and follow this bounded decision path:
-   - Prefer an existing `uv`: `uv tool install 'haliosai-cli>=2.0.6'` (or `uv tool upgrade
+   - Prefer an existing `uv`: `uv tool install 'haliosai-cli>=2.0.7'` (or `uv tool upgrade
      haliosai-cli` for an existing older tool).
-   - Otherwise use an existing `pipx`: `pipx install --force 'haliosai-cli>=2.0.6'`.
+   - Otherwise use an existing `pipx`: `pipx install --force 'haliosai-cli>=2.0.7'`.
    - If neither is available, choose the least-invasive official installation method for an
      isolated Python application installer on the current platform, then install `haliosai-cli`
      through it. Prefer a user-level method that can supply Python 3.10+ without changing the
@@ -36,7 +36,7 @@ Halios connects to repositories using a clean two-tier separation:
    to the current OS user across repositories, but not installed for every machine user or added to
    the target application's `requirements.txt`, `pyproject.toml`, virtual environment, or runtime
    image. If platform policy blocks the isolated installer or the package index cannot resolve
-   version 2.0.6 or newer, report the specific blocker and stop; never continue with the incompatible
+   version 2.0.7 or newer, report the specific blocker and stop; never continue with the incompatible
    public 1.x package or install mutable source from a default branch.
 3. Run `halios auth status`. If credentials are absent, run `halios auth login`; do not write them to
    the project or ask the user to paste them into chat.
