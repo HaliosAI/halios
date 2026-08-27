@@ -14,8 +14,10 @@ quality independent of whichever coding model happens to author the first draft.
   `classifier`). Split independent semantic criteria into separate checks.
 - `evaluation_config.task_name` is required. Use a stable, human-readable task name and a score
   threshold from 0 to 1.
-- Prefer deterministic rules for structure and exact facts, classifiers for established
-  classification problems, and LLM judges only for meaning or outcome quality.
+- Choose the simplest evaluator that can measure the requirement correctly. Deterministic rules are
+  for mechanically observable structure and exact facts; classifiers fit established classification
+  problems; LLM judges fit meaning or outcome quality. If a valid paraphrase could fail a regex or
+  string match, the requirement is semantic and needs a focused semantic evaluator instead.
 
 ## Deterministic rule polarity
 

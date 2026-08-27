@@ -6,10 +6,18 @@ this skill, not an optional external dependency.
 
 1. Inspect the system prompt, tool schemas, routes, policies, error handling, and user-facing claims.
 2. Edit `.halios/eval.yml` first. Capture concrete goals, risks, stable check IDs, and a measurable
-   reliability bar. The CLI validates its packaged `halios_cli/schemas/eval.schema.json`.
-3. Map each critical requirement to the cheapest adequate check:
-   deterministic structure/presence/schema/regex first, classifier next, LLM judge only when meaning
-   or task success cannot be evaluated deterministically.
+   reliability bar. Read and adapt [`../assets/eval.example.yml`](../assets/eval.example.yml) as a
+   structural example; it is a pattern library, not a checklist of rules every agent should have.
+   The CLI validates its packaged `halios_cli/schemas/eval.schema.json`.
+3. Map each critical requirement to the simplest evaluator that can measure it correctly:
+   - Use deterministic rules for mechanically observable facts such as presence, exact structured
+     values, numeric bounds, tool arguments, JSON shape, or an intrinsically formatted identifier.
+   - Do not use regex or string matching as a proxy for meaning. If a valid paraphrase could fail
+     the rule, use a semantic evaluator instead.
+   - Use a focused LLM judge when correctness depends on meaning, context, policy adherence, task
+     completion, or acceptable paraphrasing. Keep one semantic criterion per rubric.
+   - Add only checks that map to an actual goal, risk, policy, or tool contract. Do not copy every
+     rule form from the example merely because it is available.
 4. Mark safety, policy, and strict tool/schema checks as protected hard gates.
 5. Edit `.halios/scenarios.yml` using the canonical field names. The CLI validates the packaged
    `halios_cli/schemas/scenarios.schema.json` JSON Schema before review and before every run. The

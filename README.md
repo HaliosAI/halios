@@ -36,6 +36,10 @@ scenarios in `.halios/`, and run one smoke scenario. It stops with a verificatio
 asking whether to run the full suite and how many trials per scenario to use. The summary includes
 direct Halios UI links for reviewing the materialized suite, smoke run, and trace evidence.
 
+If the Halios CLI is missing, the coding agent will tell you before installing `haliosai-cli` as
+user-level tooling that can be reused across projects. It is kept separate from your application's
+runtime dependencies.
+
 ---
 
 ### Standalone CLI Installation
