@@ -1,5 +1,10 @@
 # Run evals within the requested scope
 
+Read existing `.halios/discovery.yml` and [the discovery contract](../references/discovery.md).
+Carry unresolved scope/coverage into the handoff even when the configured run passes. Discovery
+notes do not change run outcomes or excuse missing telemetry/failed checks. If no meaningful safe
+scenario can run, report setup as incomplete rather than fabricate a smoke case.
+
 ## Setup smoke
 
 1. Run `halios project check`. It must report a matching, non-empty server suite revision and
@@ -18,7 +23,7 @@
    `links.evaluation_run`, `links.evaluation_traces`, and `links.trace` from the completed report.
 3. For a setup, connect, or configure request, stop after this one smoke command. Report the agent
    identity, configured suite counts, smoke run id, trace id, telemetry verification, and check
-   results. Include a compact **Review in Halios** section with the CLI-provided suite, run, and
+   results, plus unresolved discovery items and work not verified. Include a compact **Review in Halios** section with the CLI-provided suite, run, and
    representative trace links. Do not run the full bank, investigate behavioral failures beyond this summary, or edit
    the agent prompt, tools, or code. Ask whether the user wants a full-suite evaluation and require
    them to choose the number of trials per scenario. If the smoke command fails, report the exact

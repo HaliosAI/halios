@@ -4,7 +4,12 @@ Before authoring or reviewing checks, read the bundled
 [`halios-check-config`](../references/halios-check-config.md) contract completely. It is part of
 this skill, not an optional external dependency.
 
-1. Inspect the system prompt, tool schemas, routes, policies, error handling, and user-facing claims.
+1. Inspect the system prompt, tool schemas, routes, policies, error handling, and user-facing claims,
+   together with accessible examples/evidence and existing `.halios/discovery.yml`. Follow
+   [discovery](../references/discovery.md) for unresolved requirements or work. If retrieval/search
+   supplies knowledge for answers, follow [RAG authoring](../references/rag-evals.md) before drafting
+   cases; a generic prompt and `query` parameter are not domain evidence. Continue only supportable
+   work and ask for missing examples, sources, decisions, or access details when needed.
 2. Edit `.halios/eval.yml` first. Capture concrete goals, risks, stable check IDs, and a measurable
    reliability bar. Read and adapt [`../assets/eval.example.yml`](../assets/eval.example.yml) as a
    structural example; it is a pattern library, not a checklist of rules every agent should have.
@@ -23,10 +28,12 @@ this skill, not an optional external dependency.
    `halios_cli/schemas/scenarios.schema.json` JSON Schema before review and before every run. The
    schema is strict: use `title`, `goal`, `initial_message`, `agent_context`, `simulator_context`,
    `persona`, `constraints`, `arc_messages`, `risk_label`, and bounded `max_turns`.
+   `risk_label` must be `benign`, `boundary`, or `adversarial`; happy paths and tool failures are
+   scenario descriptions, not additional enum values. Draft-only work still uses this contract.
 
    **Context Partitioning**:
    - `agent_context`: State intentionally available to the target application at startup (e.g., `channel`, `workspace_root`, `account_tier`). The author/coding agent **must inspect the target agent's code, entrypoint, or adapter** to determine which runtime attributes the agent expects. Halios stores this and delivers it to the agent adapter. If the agent needs no initial attributes, use `{}`.
-   - `simulator_context`: User-private facts, ground-truth data, synthetic test credentials, customer preferences, and hidden test conditions. Halios stores this and keeps it strictly on the backend/simulator environment — it is **never** sent to the application. The simulator uses this private context to answer the agent's questions dynamically across turns. Never leave `simulator_context` empty for multi-turn conversational scenarios. Never commit real secrets.
+   - `simulator_context`: User-private facts, synthetic test credentials, and preferences the simulated user may disclose naturally. It is not passed directly to the application, but the simulator can reveal its contents in conversation; do not store grader-only expected answers here. Supply relevant user facts for multi-turn scenarios, not invented answer keys to satisfy validation. Never commit real secrets.
 
    **Scenario Archetype Guidelines**:
    - **Conversational / Exploratory Agents (Chatbots, Customer Support, Sales, Intake)**:
@@ -34,6 +41,8 @@ this skill, not an optional external dependency.
      - `arc_messages`: Write **behavioral guidelines and milestone intents** (e.g., *"Provide contact details from simulator_context when asked"*, *"Confirm email when prompted"*, *"Ask what alternatives exist"*), not rigid verbatim transcripts.
    - **Task-Oriented / Execution Agents (Coding Agents, CI/CD Runners, Workflow Automations)**:
      - The interaction is not exploratory. Preloading complete task specifications, issue descriptions, repository files, or input payloads directly into `initial_message` and `agent_context` is natural and standard practice.
+   - **Fixed knowledge questions**: Use a natural, complete `initial_message`, `max_turns: 1`, no
+     follow-up arc, and an existing supported generation mode. Do not add greeting/thank-you turns.
 
    ```yaml
    version: 1
@@ -65,13 +74,19 @@ this skill, not an optional external dependency.
        generation_mode: simulation-with-arc-hint
        max_turns: 6
    ```
-6. Include happy paths, realistic ambiguity, tool failures, adversarial cases, and production
-   regressions. Do not invent expected assistant wording when a behavioral rubric is the real need.
+6. Select a few meaningful case dimensions from requirements/evidence, choose valid combinations,
+   then write natural inputs. Include relevant happy paths, ambiguity, tool failures, adversarial
+   cases, and known regressions without a compulsory Cartesian product. Verify expected facts
+   against sources separately from question diversity. Do not invent expected assistant wording
+   when a behavioral rubric is the real need.
 7. Run `halios eval review --json`. Treat every `schema_errors` and `quality_gaps` entry as blocking.
    Then perform the semantic review from `halios-check-config`: verify requirement polarity,
    outcome-vs-example generality, one criterion per rubric, and positive/negative scenario evidence.
    Show the user the resulting contract when it contains business judgments that require
    confirmation. A schema-valid suite is not automatically a meaningful suite.
+   Review `discovery` separately: open gaps or invalid notes are not executable check failures,
+   but they must appear in the handoff. Absence of notes is not complete coverage. Do not weaken
+   existing required checks or treat missing required telemetry as an advisory gap to get a pass.
 8. Run `halios project configure --json`. It atomically creates one persistent server revision containing
    both checks/rules and scenarios, then rewrites both YAML files from the canonical response. Do
    not continue unless the command reports materialization verified with the expected check, rule,

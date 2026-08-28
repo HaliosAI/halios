@@ -32,6 +32,7 @@ from .cli_support import (
     load_yaml,
     resolve_credentials,
 )
+from .discovery import review_discovery
 
 app = typer.Typer(help="Review, run, and report agent reliability.", no_args_is_help=True)
 TRACE_LIMIT = 10_000
@@ -835,6 +836,8 @@ def review(json_output: bool = typer.Option(False, "--json")) -> None:
     eval_plan = load_yaml(root / ".halios" / "eval.yml")
     scenarios_payload = load_yaml(root / ".halios" / "scenarios.yml")
     result = _review_suite(eval_plan, scenarios_payload)
+    # INVARIANT: Local discovery notes never alter executable-suite validation or gates.
+    result["discovery"] = review_discovery(root)
     if json_output:
         typer.echo(json.dumps(result, indent=2, sort_keys=True))
     else:
@@ -844,6 +847,17 @@ def review(json_output: bool = typer.Option(False, "--json")) -> None:
         )
         for gap in result["coverage_gaps"]:
             typer.echo(f"- {gap}")
+        discovery = result["discovery"]
+        typer.echo(
+            f"Discovery: {discovery['status']} "
+            "(local notes, not a proof of complete coverage)"
+        )
+        for gap in discovery["open_gaps"]:
+            typer.echo(f"- [{gap['id']}] {gap['reason']}")
+            typer.echo(f"  Affects: {', '.join(gap['affects'])}")
+            typer.echo(f"  Next step: {gap['next_step']}")
+        for error in discovery["errors"]:
+            typer.echo(f"- Warning: {error}")
     if result["status"] != "ready":
         raise typer.Exit(code=1)
 

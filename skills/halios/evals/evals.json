@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "Setup agent evaluation for this project using Halios.",
-      "expected_output": "Inspects the agent, installs the Halios CLI if missing, uses separate auth/project setup, writes only the three-file skeleton, configures stock OTel plus a jsonl-v1 adapter, authors evals/scenarios, and runs exactly one fresh k=1 smoke scenario. It then summarizes the agent, suite, run, trace, telemetry, and check evidence; includes a compact Review in Halios section using CLI-provided agent, scenario, rules/rubrics, exact run, and representative trace links; stops without running the full bank or editing agent behavior; and asks whether to run the full suite with a user-selected trial count.",
+      "expected_output": "Inspects the agent, installs the Halios CLI if missing, uses separate auth/project setup, writes the three-file executable skeleton plus optional local discovery notes for unresolved work, configures stock OTel plus a jsonl-v1 adapter, authors supportable evals/scenarios, and runs exactly one fresh k=1 smoke scenario when safe prerequisites exist. It summarizes verified evidence, pending/unverified work and next inputs, includes available CLI-provided review links, and stops without running the full bank or editing agent behavior. It does not invent a smoke case or claim completion when required evidence is unavailable.",
       "files": []
     },
     {
@@ -71,6 +71,24 @@
       "id": 12,
       "prompt": "The Halios setup smoke test finished. Give me a concise handoff so I can review what was created without having to search around the dashboard.",
       "expected_output": "Provides a short Review in Halios section with no more than five CLI-provided links: agent overview, scenarios, rules/rubrics, exact smoke run, and representative trace. It briefly says what can be verified in the UI, does not invent routes or expose credentials, and does not make opening the UI mandatory.",
+      "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "Design Halios evals locally for our document assistant. Its prompt says: answer user questions using search_documents(query: string), cite the returned document IDs, and never invent facts. The tool accepts a nonempty query and returns [{id, text}]. The source is a private remote service; no corpus, metadata, trace samples, or typical user questions are available in this checkout. Author what you can and tell me what remains. Do not connect, install, run the application, or run evaluations.",
+      "expected_output": "Recognizes retrieval-backed behavior despite the generic prompt; creates only supportable draft checks/cases in the existing suite; records unresolved knowledge discovery in discovery.yml with stable IDs, affected coverage and an actionable next step; asks for seed questions, source samples, or existing access details without secrets; does not invent source truth, a second suite, full recall, or successful runtime verification.",
+      "files": []
+    },
+    {
+      "id": 14,
+      "prompt": "Our refund workflow has no document search. Code exposes issue_refund(order_id, amount). Policy says ask for an order ID and obtain approval for high-value refunds, but nobody has specified the amount threshold. Draft the supportable Halios checks/scenarios locally. Do not call the real refund tool, configure a server suite, or run evaluations. Explain what you completed and what you still need.",
+      "expected_output": "Continues with the known order-ID/tool requirements, records the missing approval threshold as a non-RAG discovery gap, asks a targeted policy question, and does not guess an amount or make a real refund. Reports drafts versus unconfigured/unverified work and keeps expected answers out of simulator context.",
+      "files": []
+    },
+    {
+      "id": 15,
+      "prompt": "Read-only review: our configured Halios smoke run passed. Existing discovery notes still say production trace verification is pending and the domain corpus is inaccessible. Are we fully covered? Do not edit files, run anything, or deploy.",
+      "expected_output": "Explains that the passed smoke covers the configured suite only, retains both unresolved limitations, recommends specific next inputs/actions, and does not edit the notes, mark gaps resolved, run/deploy, or claim complete coverage. Proposes any discovery updates in the response only.",
       "files": []
     }
   ]

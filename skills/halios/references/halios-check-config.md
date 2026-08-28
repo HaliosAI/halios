@@ -61,8 +61,8 @@ For every important invariant, include:
 
 ### Context partitioning & archetype rules:
 - **`agent_context`**: State delivered directly to the target application/adapter at runtime. The scenario designer must inspect the target agent's codebase/adapter to determine what runtime parameters the agent expects (e.g. `channel`, `workspace_root`). Leave `{}` if none.
-- **`simulator_context`**: Private state for the test simulator (credentials, ground truth, preferences). Halios keeps this backend-only and never sends it to the application.
-- **Conversational / Exploratory scenarios**: Start with minimal, natural greetings (`"Hi"`). Do not preload full user credentials or multi-part questions in `initial_message`; let the agent elicit them turn-by-turn. Write `arc_messages` as behavioral intent milestones, not rigid scripts.
+- **`simulator_context`**: User-private facts/preferences the simulator may disclose in conversation, not grader-only ground truth. Backend-only storage does not prevent the simulator from saying an answer key aloud. Never commit real credentials.
+- **Conversational / Exploratory scenarios**: Use a natural opening appropriate to the task, such as a greeting or concise question. Let the agent elicit information when that interaction is under test. Write `arc_messages` as behavioral intent milestones, not rigid scripts. Fixed knowledge questions need no greeting/thank-you exchange: use `max_turns: 1` with no follow-up arc and a supported generation mode.
 - **Task-Oriented / Execution scenarios**: Preloading complete task specifications, instructions, or repo files in `initial_message` and `agent_context` is natural and standard.
 - Scenarios must not prescribe the desired assistant wording in `constraints`.
 
@@ -80,6 +80,13 @@ For each check, answer all of the following before configuration:
 
 Flag the suite as not ready when any answer is missing. Do not accept “the YAML validates” as a
 quality argument.
+
+For proposed work outside the executable suite that cannot yet be supported, use
+[discovery notes](discovery.md) instead of placeholder checks or fabricated references. Do not
+remove existing requirements to obtain a pass. For retrieval-backed requirements, read
+[RAG authoring](rag-evals.md): citation syntax, factual support, task completion, and source/policy
+correctness are distinct; each needs the right evidence. A discovery gap cannot excuse missing
+required evidence in an executed check.
 
 ## Canonical competitor-policy example
 

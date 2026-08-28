@@ -54,15 +54,25 @@ Treat the user's verb as an authorization boundary:
 These boundaries keep setup predictable: a request to set up, run, or diagnose evals does not imply
 permission to enter an open-ended repair loop.
 
+## Discovery and partial progress
+
+Read [references/discovery.md](references/discovery.md) when setup/authoring encounters missing
+evidence, access, decisions, capabilities, or verification, and whenever `.halios/discovery.yml`
+already exists. Keep useful work moving within the request; ask a targeted question and record
+what cannot yet be resolved instead of inventing success. This applies to any application.
+When tools/code retrieve knowledge for answers (including generic search/RAG agents), read
+[references/rag-evals.md](references/rag-evals.md) before designing their evaluations.
+
 ## Stable product contract
 
 - Keep skill installation separate from product setup. The skill is distributed by an Agent Skills
   installer such as `npx skills add`; when Halios work begins, install or upgrade the
   `haliosai-cli` Python tool through the connect workflow. Never invent a `halios skill install`
   command.
-- Keep exactly `.halios/config.toml`, `.halios/eval.yml`, and `.halios/scenarios.yml` as Halios
-  project state. Keep all three in Git. The YAML files are a revisioned checkout of the single
-  server-owned suite; edits are inactive until `halios project configure` succeeds.
+- Keep `.halios/config.toml`, `.halios/eval.yml`, and `.halios/scenarios.yml` as executable Halios
+  project state in Git. The YAML files are a revisioned checkout of the single server-owned suite;
+  edits are inactive until `halios project configure` succeeds. Optional `.halios/discovery.yml`
+  records local unresolved work only; never create a second executable suite for RAG or other gaps.
 - Run `halios auth login` only when `halios auth status` shows credentials are missing. Login and
   repository initialization are separate operations; credentials live outside the repository.
 - Call `halios project init --agent <new-display-name>` to create a fresh, empty agent. Reuse is
@@ -85,7 +95,8 @@ permission to enter an open-ended repair loop.
   then smoke-test it. The adapter is only an eval/optimization execution bridge. Use `trial_id` for
   stateful agent sessions, the latest `message` for stateful agents, and full `messages` for stateless
   agents. Pass only scenario `agent_context` into the application. Keep `simulator_context` on the
-  Halios backend so private user facts and hidden test state cannot leak into the system under test.
+  Halios backend for user-private facts that the simulator may reveal naturally. It is not an
+  answer-key store; grader-only expectations must not leak through simulated user messages.
 - Run application tools against project-owned test accounts, sandboxes, mocks, or fixtures. The
   simulated user supplies conversation turns; it never executes tools or fabricates tool results.
 - Author reliability intent directly in `.halios/eval.yml`; there is no `eval plan` or `eval-spec`
@@ -138,7 +149,13 @@ onboarding or eval workflow.
 
 ## Review handoff
 
-At the end of a completed workflow, include a compact **Review in Halios** section using the most
+End every workflow, including partial or blocked work, with what was completed and verified,
+what was not completed or verified, and the next input/action needed. Include relevant unresolved
+discovery IDs; a passing configured suite does not establish missing coverage. For read-only work,
+report gaps without editing the discovery file. Do not repeat unchanged questions mid-task or set
+up background reminders. If setup cannot safely reach its smoke test, say it is incomplete.
+
+When links are available, include a compact **Review in Halios** section using the most
 relevant CLI-provided links. Prefer the exact run, trace, or optimization link over a collection
 page, include no more than five links, and do not require the user to open them. For setup, include
 the agent, scenarios, rules/rubrics, smoke run, and representative trace when returned. For a run or

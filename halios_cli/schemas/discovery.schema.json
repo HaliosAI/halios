@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Halios local discovery notes (not an executable suite)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "gaps"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "gaps": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/gap" }
+    }
+  },
+  "$defs": {
+    "text": { "type": "string", "pattern": "\\S", "maxLength": 2000 },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "reason", "affects", "next_step"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+          "maxLength": 120
+        },
+        "status": { "enum": ["open", "resolved"] },
+        "reason": { "$ref": "#/$defs/text" },
+        "affects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "next_step": { "$ref": "#/$defs/text" },
+        "resolution": { "$ref": "#/$defs/text" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "resolved" } } },
+          "then": { "required": ["resolution"] }
+        }
+      ]
+    }
+  }
+}

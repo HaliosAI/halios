@@ -17,6 +17,10 @@ Halios connects to repositories using a clean two-tier separation:
 ## Steps
 
 1. Inspect the agent entrypoint, prompt/tool definitions, runtime, and current OpenTelemetry setup.
+   Read existing discovery notes. For unresolved access, evidence, decisions, or verification,
+   follow [discovery](../references/discovery.md); retrieval-backed applications also use
+   [RAG authoring](../references/rag-evals.md). Do not stop unrelated safe setup work merely because
+   some domain coverage is pending, or claim setup complete when a required verification is blocked.
 2. Run `halios --version` and require version 2.0.7 or newer. If the CLI is absent or older, tell the
    user before installing it:
 
