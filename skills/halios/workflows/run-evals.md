@@ -35,6 +35,6 @@ After the setup smoke, stop with the handoff described in the root Skill. A fail
 a result to report; missing required telemetry or grading evidence leaves verification incomplete.
 Ask before full-suite runs or behavioral repairs. If no meaningful smoke is possible, explain why.
 Choose the next step from the evidence: missing telemetry or grading evidence calls for
-verification; a thin fixed-question suite calls for coverage expansion using the
+verification; a thin fixed-question suite calls for offering "expand the scenarios" using the
 [authoring guidance](design-evals.md), then a proposed `-k 1` run. Suggest repetitions for
 consistency questions and prompt/retrieval changes for observed failures, not as a generic menu.

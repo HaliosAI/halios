@@ -44,6 +44,18 @@ can reveal `simulator_context` in dialogue, so neither field is grader-only answ
 A scenario goal describes intent; it is not an executable assertion. Put expected outcomes in
 checks with an evidence path that can actually evaluate them.
 
+## Expanding coverage
+
+Treat "expand the scenarios", "add more test cases", or "build a question dataset" as authoring
+requests, not requests for more repetitions. Inspect the existing suite and available evidence:
+for fixed-question tasks, grow a dataset of distinct evidence-backed questions using ordinary
+scenarios; for conversational tasks, add distinct situations, starting states, or user intentions.
+Mixed suites may need both. Preserve useful cases and stable IDs, and extend applicable checks
+with verified expectations so new cases are actually graded. Choose a bounded useful expansion;
+ask for missing evidence, not for the user to understand `max_turns` or choose an internal format.
+Explain added coverage and remaining gaps in plain language. Expansion alone does not authorize
+publishing the suite or running it; those remain separate requested actions.
+
 ## Review and configure
 
 `halios eval review --json` validates local files against the packaged

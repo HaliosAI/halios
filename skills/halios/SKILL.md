@@ -1,8 +1,8 @@
 ---
 name: halios
 description: >
-  Set up AI-agent evaluations with Halios, author checks and scenarios, run evaluations,
-  inspect failures, add reliability gates, or optimize an agent prompt. Use for agent
+  Set up AI-agent evaluations with Halios, author checks, expand scenarios or question datasets,
+  run evaluations, inspect failures, add reliability gates, or optimize an agent prompt. Use for agent
   evaluation and reliability workflows, including requests that do not yet name Halios.
 license: Apache-2.0
 compatibility: Requires shell access and Python 3.10+ to install and run haliosai-cli 2.0.7 or newer.
@@ -23,7 +23,7 @@ and user feedback arrive.
 | Task | Reference |
 | --- | --- |
 | Set up a repository | [Connect](workflows/connect.md) |
-| Author or review a suite | [Design evals](workflows/design-evals.md) |
+| Author, expand scenarios, or review a suite | [Design evals](workflows/design-evals.md) |
 | Run a smoke test or evaluation | [Run evals](workflows/run-evals.md) |
 | Diagnose failures or create regressions | [Inspect failures](workflows/inspect-failures.md) |
 | Add a CI gate | [CI](workflows/ci.md) |

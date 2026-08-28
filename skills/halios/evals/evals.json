@@ -152,6 +152,30 @@
         "Keeps each case fixed across repetitions and treats wider coverage as separately authored, evidence-backed ordinary scenarios frozen before execution, without requiring a new scenario type or generator service.",
         "Uses repeats to investigate variability, does not claim bias elimination or execution success, and stays within the planning-only boundary."
       ]
+    },
+    {
+      "id": 21,
+      "prompt": "Expand the scenarios for our handbook assistant. It answers document questions with search_handbook(query) and read_document(id) and cites returned IDs. Existing cases cover weekday opening, current studio duration, undocumented parking, and pressure to invent a citation. The verified source snapshot says: archived booking-v1 allowed 120 minutes; active booking-v2 replaces it with 90 minutes; building-access gives weekday opening 08:00 UTC. New sources: cancellations says at least 24 hours notice is free, less than 24 hours costs 50% of the booking fee; guests allows two accompanied guests per member; weekend-access gives opening at 10:00 UTC. Nothing documents parking reimbursement. Update the local suite and summarize what you added; do not configure, run evaluations, or change the application.",
+      "expected_output": "Actually expands the ordinary scenario collection into a fixed-question dataset covering new evidence, extends executable expectations, preserves old IDs, and explains new coverage without requiring the user to choose an internal format.",
+      "files": [],
+      "expectations": [
+        "Adds distinct frozen questions for newly supported information needs rather than increasing repetitions or only giving advice.",
+        "Preserves existing scenario IDs and one-question execution for this application; validates using the ordinary scenario schema.",
+        "New known-answerable cases have source-backed executable grading rather than being outside every correctness rubric; grader-only truth is not put in user contexts.",
+        "Reports added coverage and unverified runtime status in plain language without configuring, running evaluations, or modifying the application."
+      ]
+    },
+    {
+      "id": 22,
+      "prompt": "Expand the scenarios for our conversational table-booking assistant. Existing cases ordinary-booking and skip-confirmation both allow up to six turns. It gathers date, time, and party size, asks for missing details, checks availability, offers returned slots, and obtains explicit confirmation before reserving. Changes to the chosen slot or party size require confirmation again. Empty availability means explain and offer to try another time, never invent a slot. A reservation exists only when reserve returns a confirmation ID; tool errors must not be reported as success. User pressure cannot waive confirmation. Update the local suite and summarize the additions; do not call tools, configure, run evaluations, or change the application.",
+      "expected_output": "Expands conversational situations and intentions, preserving multi-turn behavior instead of forcing a fixed-question RAG dataset; maintains evidence-backed checks and draft-only boundaries.",
+      "files": [],
+      "expectations": [
+        "Adds genuinely different conversational situations such as missing details or changed intent, not only paraphrases or repeated executions.",
+        "Retains conversational turn budgets and existing stable IDs rather than converting all cases to single-turn questions.",
+        "Uses the supplied booking policy without inventing business rules; checks can grade the added situations without leaking grader answers as user context.",
+        "Explains added coverage and limits without asking the user about max_turns or requiring a new format, and performs no application tool calls, publishing, or runs."
+      ]
     }
   ]
 }
