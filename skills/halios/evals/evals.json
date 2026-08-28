@@ -128,6 +128,30 @@
         "Provides meaningful correct/incorrect grader counterexamples or review examples without claiming they were executed or calibrated.",
         "Reports draft-only status, verification gaps and the limited snapshot scope; does not claim corpus-wide recall or live integration success."
       ]
+    },
+    {
+      "id": 19,
+      "prompt": "Use Halios to write a concise next-steps handoff for our document assistant. Setup is complete: repository connected, adapter and instrumentation verified, eval.yml and scenarios.yml configured. The suite has four fixed single-turn questions (opening hours, booking limit, an undocumented topic, and a request to fabricate a citation). Only opening hours was run, once: execution completed, telemetry verified, applicable checks passed, gate passed. The local handbook has several other untouched sections, and ten historical support questions are available; they have not been reviewed for coverage. No behavioral failure has been observed. What should we do next? This is a handoff only: do not edit the application or suite, call services, or run evaluations.",
+      "expected_output": "Distinguishes the one-question, one-trial smoke result from the four-question configured suite; does not imply all scenarios passed or broad coverage was verified. Prioritizes reviewing the available source/support questions and expanding evidence-backed fixed cases, with a proposed one-trial-per-case run rather than increased repetitions as the default next step. Distinguishes new question coverage from repeated execution and does not propose fresh questions inside each repetition. Does not recommend prompt optimization as the immediate action without failure evidence, claim repetitions remove judge bias, or perform forbidden mutations or runs.",
+      "files": [],
+      "expectations": [
+        "Distinguishes the one-question, one-trial smoke result from the four-question configured suite; does not imply all scenarios passed or broad coverage was verified.",
+        "Prioritizes reviewing the available source/support questions and expanding evidence-backed fixed cases, with a proposed one-trial-per-case run rather than increased repetitions as the default next step.",
+        "Distinguishes new question coverage from repeated execution and does not propose fresh questions inside each repetition.",
+        "Does not recommend prompt optimization as the immediate action without failure evidence, claim repetitions remove judge bias, or perform forbidden mutations or runs."
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "Our document assistant has 24 reviewed fixed single-turn scenarios, all with stable initial_message values and grader-side source expectations. I want to run the existing suite five times per scenario to investigate intermittent failures on identical questions. Give me the exact Halios command and a short execution/handoff plan. Explain whether I should generate a different question for each of these runs, and what to do if I later want wider question coverage. Planning only: do not run commands, call services, or modify files.",
+      "expected_output": "Preserves the requested five repetitions in the proposed halios eval run command instead of substituting k=1 or requesting a different count. Describes 24 distinct questions times five repetitions as 120 planned trials, not 120 distinct questions or completed executions. Keeps each case fixed across repetitions and treats wider coverage as separately authored, evidence-backed ordinary scenarios frozen before execution, without requiring a new scenario type or generator service. Uses repeats to investigate variability, does not claim bias elimination or execution success, and stays within the planning-only boundary.",
+      "files": [],
+      "expectations": [
+        "Preserves the requested five repetitions in the proposed halios eval run command instead of substituting k=1 or requesting a different count.",
+        "Describes 24 distinct questions times five repetitions as 120 planned trials, not 120 distinct questions or completed executions.",
+        "Keeps each case fixed across repetitions and treats wider coverage as separately authored, evidence-backed ordinary scenarios frozen before execution, without requiring a new scenario type or generator service.",
+        "Uses repeats to investigate variability, does not claim bias elimination or execution success, and stays within the planning-only boundary."
+      ]
     }
   ]
 }

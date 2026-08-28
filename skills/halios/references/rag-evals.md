@@ -40,6 +40,16 @@ before relying on a judge.
 
 Use the [scenario/check contracts](../workflows/design-evals.md) for fixed questions and context
 separation. Reference answers need a supported grader path, not simulator-visible storage.
+
+A small fixed-input dataset can be ordinary scenarios: one stable ID and `initial_message` per
+question, with `max_turns: 1`. Author distinct, evidence-backed questions from corpus facts,
+benchmarks, or real failures; verify their supporting sources and grader-only expectations.
+Paraphrases test wording sensitivity but do not replace coverage of different information needs.
+Freeze cases before execution and reuse them for comparisons; do not generate a new question
+inside each repetition. No special scenario type, generator service, or additional LLM key is
+needed to author these cases in the coding-agent session. Add import/sampling glue only when data
+access or scale warrants it; unavailable evidence remains a discovery gap, not invented truth.
+
 Ranking metrics require labels and an appropriate runner; reranker claims need candidate/final
 rankings. Record unsupported capabilities without pretending arbitrary tool-boundary resume,
 complete recall, or new metrics are already available.
