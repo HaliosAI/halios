@@ -114,6 +114,20 @@
         "Does not invent a cause, silently reinterpret the gate as passing, weaken checks, or claim sources are absent from the stored trace.",
         "Suggests actionable investigation and makes unresolved verification visible without creating files or running/repairing the application."
       ]
+    },
+    {
+      "id": 18,
+      "prompt": "Draft a small local Halios eval/scenario suite for a shopping assistant. It uses search_products(query: string, filters: object) and get_product(id: string). Results expose product IDs, text, attributes, price/currency, and stock; the assistant recommends IDs, honors all shopper constraints, and must not invent features or availability. The supplied complete test-catalog snapshot contains: aero-10, USB-C PD 65 W, EU plug, EUR 39, in stock; aero-10-us, USB-C PD 65 W, US plug, EUR 35, in stock; aero-5, USB-C PD 30 W, EU plug, EUR 29, in stock; aero-20, USB-C PD 100 W, EU plug, EUR 59, out of stock. Color is not recorded. Typical requests: an in-stock EU-plug USB-C charger providing at least 65 W for under EUR 50; the same request under EUR 20; and whether a qualifying charger comes in blue. Explain what the checks measure and any limitations. Author drafts only: no installs, application execution, service calls, suite configuration, or evaluation runs.",
+      "expected_output": "Adapts retrieval/generation patterns to product constraints and catalog evidence, not the example handbook. Keeps answer references grader-only, uncertainty explicit, and outputs as local drafts.",
+      "files": [],
+      "expectations": [
+        "Executable retrieval checks compare evidence with all material original shopper constraints, rather than treating nonempty results or tool-argument validity as retrieval quality.",
+        "Executable answer checks distinguish support from retrieved records from correctness against the supplied catalog; the qualifying snapshot item and exclusion reasons are source-supported without invented attributes.",
+        "Unknown color is treated as missing evidence, not proven unavailability; no fictional handbook facts or unsupported citation-format requirement is copied into this application.",
+        "Draft scenario inputs validate against the packaged schema and do not expose grader-only answers through agent_context or simulator_context.",
+        "Provides meaningful correct/incorrect grader counterexamples or review examples without claiming they were executed or calibrated.",
+        "Reports draft-only status, verification gaps and the limited snapshot scope; does not claim corpus-wide recall or live integration success."
+      ]
     }
   ]
 }

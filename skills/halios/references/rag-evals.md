@@ -11,19 +11,27 @@ Verify expected facts against source text, including units and policy versions. 
 seeds, not answer keys; synthetic fixtures test their own corpus. An empty search does not prove
 absence from the corpus, and search-derived samples reflect the current retriever's blind spots.
 
-Choose the relationships relevant to the application:
+Choose the relationships relevant to the application; retrieval and generation are evaluation
+areas, not extra scores to combine with every check below:
 
-| Concern | Evidence needed |
+| Concern | What to compare |
 | --- | --- |
-| Query preserves the request | User/history and tool arguments |
-| Retrieval is useful | Question/query and returned content |
-| Answer is grounded; citations support claims | Answer and preceding source evidence |
-| Answer completes the task | Request and answer |
-| Domain/policy correctness | Applicable source-backed facts and versions |
+| Retrieval effectiveness | Known relevant evidence versus retrieved IDs/ranks; report label coverage before calling it recall. |
+| Context relevance | User's information need versus returned content, not merely topical similarity or a nonempty result. |
+| Answer faithfulness | Each material claim versus preceding source evidence, without outside knowledge filling gaps. |
+| Answer relevance | Requested information versus the answer; a related topic or relevant refusal need not complete the task. |
+| Answer correctness | Answer versus independently verified facts, applicable versions, and constraints, not only the retrieved subset. |
+| Citation support | Each cited ID/text versus its associated claim; syntax alone is a separate structural check. |
 
 These are diagnostic options, not a mandatory metric bundle. Nonempty queries and well-formatted
 citations are not evidence of relevance or truth. A grounded answer may still be incomplete or use
 an obsolete policy; refusal is not success on an answerable question.
+
+For authoring, use the paired [RAG check example](../assets/rag-eval.example.yml) and
+[scenario example](../assets/rag-scenarios.example.yml) instead of loading the generic commerce
+example too. They show one fictional source snapshot, grader-only expectations, and contrasting
+verdicts. Adapt relevant patterns; do not copy their facts or treat them as required coverage.
+Query-intent checks compare user/history with tool arguments when query rewriting matters.
 
 Inspect what evidence actually reaches the chosen judge scope. Account for repeated retrievals
 and full-document fetches; later results cannot justify earlier claims. Missing required evidence

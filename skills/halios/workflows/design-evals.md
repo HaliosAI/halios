@@ -12,7 +12,8 @@ belongs in [discovery notes](../references/discovery.md), not invented domain ex
 - `.halios/config.toml`: project identity and adapter configuration.
 
 Read the [check contract](../references/halios-check-config.md) when designing checks.
-[eval.example.yml](../assets/eval.example.yml) supplies valid patterns, not required checks.
+Use the paired examples linked by the RAG guidance for retrieval-backed work; otherwise
+[eval.example.yml](../assets/eval.example.yml) supplies general patterns. Neither is a checklist.
 Choose cases and dimensions that expose plausible mistakes; there is no mandatory domain matrix
 or prescribed number of scenarios. The current CLI does require an adversarial scenario.
 

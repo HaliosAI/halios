@@ -1,7 +1,8 @@
 # Check contract
 
-Use [eval.example.yml](../assets/eval.example.yml) for complete authoring syntax and the packaged
-eval schema for exact accepted fields. Checks group ordered rules; `pass_logic: all` requires
+Use the example selected by your workflow ([general](../assets/eval.example.yml) or
+[RAG](../assets/rag-eval.example.yml)) for authoring syntax; the packaged eval schema defines
+exact accepted fields. Checks group ordered rules; `pass_logic: all` requires
 all rules, while `any` is for genuine alternatives. A check needs at least one rule and allows
 at most one AI rule (`llm_judge` or `classifier`).
 

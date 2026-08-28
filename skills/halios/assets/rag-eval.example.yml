@@ -1,0 +1,184 @@
+# Worked example, not a required metric bundle. Pair with rag-scenarios.example.yml.
+# Fictional source snapshot (complete for this example only):
+# booking-v1 / Limits: archived; studio bookings may last 120 minutes.
+# booking-v2 / Limits: active; replaces booking-v1; maximum booking is 90 minutes.
+# building-access / Hours: the building opens at 08:00 UTC on weekdays.
+# None of these three documents specifies parking reimbursement.
+# Assumed app: search_handbook(query) and read_document(id) return source IDs/text;
+# factual answers cite [source-id]. These files do not provision that corpus or adapter.
+# Replace facts, tools, scopes, and thresholds using the real application. Do not
+# copy this fictional truth into a customer's suite. Comments never reach the judge;
+# required reference facts are therefore repeated inside the applicable rubrics.
+# Full-conversation scopes below need user + ordered tool results + answer, including
+# follow-up reads. Verify the actual payload; a scope name does not prove delivery.
+# Counterexamples are proposed grader tests, not executed validation results.
+version: 1
+name: Fictional handbook RAG patterns
+goals:
+  - Retrieve evidence that answers handbook questions
+  - Answer using applicable facts and supporting citations
+  - Communicate evidence limits without inventing information
+risks:
+  - Retrieval misses relevant information or returns only an obsolete version
+  - A plausible answer is unsupported, incomplete, or incorrectly cited
+  - Honest abstention masks a retrieval failure on an answerable question
+checks:
+  - id: context-relevance
+    name: Retrieved evidence addresses the question
+    category: quality
+    protected: false
+    target: full_conversation
+    scope: entire
+    pass_logic: all
+    rules:
+      - id: context-relevance-judge
+        type: llm_judge
+        config:
+          rubric: |
+            Did the gathered evidence contain the information needed for the user's request?
+            Judge the original question/history against search and follow-up read results,
+            not the final answer or just the rewritten query. For this fixture, current studio
+            limits need the active 90-minute rule; weekday opening needs 08:00 UTC.
+            Pass when the gathered content supplies the requested information; equivalent
+            authoritative evidence is acceptable. Fail for irrelevant, obsolete-only, partial,
+            or visibly empty results on these known-answerable requests, including no retrieval
+            when a complete trace confirms it. Nonempty or topically similar results do not suffice.
+            Parking reimbursement is outside this fixture's documented coverage: not applicable.
+            For other questions without a reference, assess observed relevance only; do not
+            infer corpus-wide absence. Missing required trace content means insufficient evidence.
+          temperature: 0.0
+          threshold: 0.8
+    evaluation_config: {task_name: Context relevance, score_threshold: 0.8}
+    # PASS: active limit passage retrieved. FAIL: only opening hours for a limit question.
+    # This semantic judgment is not Precision@k or Recall@k. A known source hit is
+    # a separate cheap diagnostic where stable IDs are available; it is not full recall.
+
+  - id: answer-faithfulness
+    name: Factual claims follow preceding evidence
+    category: quality
+    protected: true
+    target: full_conversation
+    scope: entire
+    pass_logic: all
+    rules:
+      - id: faithfulness-judge
+        type: llm_judge
+        config:
+          rubric: |
+            Are the answer's factual claims supported by evidence available before each claim?
+            Pass when every material claim follows the preceding source text; accept paraphrases.
+            Fail for additions or contradictions, including claims made despite visibly empty
+            results. Later retrieval cannot justify an earlier assertion. Evaluate support,
+            not policy currency or citation correctness; those are separate checks.
+            No factual claims means not applicable. If required source content was not captured,
+            return insufficient evidence rather than guessing whether the answer is supported.
+          temperature: 0.0
+          threshold: 0.8
+    evaluation_config: {task_name: Answer faithfulness, score_threshold: 0.8}
+    # PASS: 120 minutes from archived v1 alone; current-policy correctness still FAILS.
+    # FAIL: 120 minutes when the only preceding source says 90 minutes.
+
+  - id: answer-relevance
+    name: Answer addresses the actual request
+    category: quality
+    protected: false
+    target: full_conversation
+    scope: entire
+    pass_logic: all
+    rules:
+      - id: answer-relevance-judge
+        type: llm_judge
+        config:
+          rubric: |
+            Does the answer address the information requested by the user?
+            Pass when it directly addresses each requested part or explicitly identifies which
+            requested part cannot be answered. Fail for a merely related topic, omitted parts,
+            or answering a different question. Do not judge factual truth here. A relevant
+            refusal may still fail answer correctness; relevance alone is not task success.
+            No discernible request means not applicable. A visibly absent answer to a request
+            fails; an uncaptured request or response means insufficient evidence.
+          temperature: 0.0
+          threshold: 0.8
+    evaluation_config: {task_name: Answer relevance, score_threshold: 0.8}
+    # PASS: a booking duration for a duration question. FAIL: only building opening hours.
+
+  - id: answer-correctness
+    name: Answer matches verified applicable facts
+    category: quality
+    protected: true
+    target: full_conversation
+    scope: entire
+    pass_logic: all
+    rules:
+      - id: correctness-judge
+        type: llm_judge
+        config:
+          rubric: |
+            Is the answer correct for the requested handbook facts?
+            Grader-only fixture references: booking-v2 / Limits is active and replaces v1;
+            current maximum studio booking is 90 minutes. Archived v1 allowed 120 minutes.
+            building-access / Hours states weekday opening at 08:00 UTC.
+            Pass when the requested facts are correct, with equivalent units/wording accepted
+            (90 minutes equals 1.5 hours). Historical requests may describe v1 explicitly as
+            historical. Fail for obsolete current-policy answers, wrong units, missing requested
+            facts, or refusal on these known-answerable questions even if retrieval missed them.
+            Parking reimbursement and other facts outside these references are not applicable.
+            Missing user/answer trace data means insufficient evidence. Do not use the retrieved
+            subset as the sole definition of truth or require unrelated facts in the answer.
+          temperature: 0.0
+          threshold: 0.8
+    evaluation_config: {task_name: Reference-backed correctness, score_threshold: 0.8}
+    # PASS: current limit 1.5 hours. FAIL: current limit 2 hours, even when v1 was retrieved.
+
+  - id: citation-support
+    name: Cited sources support their associated claims
+    category: quality
+    protected: true
+    target: full_conversation
+    scope: entire
+    pass_logic: all
+    rules:
+      - id: citation-support-judge
+        type: llm_judge
+        config:
+          rubric: |
+            Does each material factual claim cite a source that supports that claim?
+            Pass when each claim is attributed to an actual preceding returned source ID and
+            its text supports the claim. Fail for missing citations, invented IDs, or a citation
+            to unrelated text, even if another retrieved source supports the answer.
+            A citation-shaped string is not proof. No factual claims means not applicable.
+            Missing captured source IDs/text means insufficient evidence; visibly returned
+            sources that do not support the cited claim are a failure, not missing evidence.
+          temperature: 0.0
+          threshold: 0.8
+    evaluation_config: {task_name: Citation support, score_threshold: 0.8}
+    # PASS: 90 minutes [booking-v2] with its text present. FAIL: 90 minutes [building-access].
+
+  - id: evidence-limit-honesty
+    name: Insufficient context is acknowledged honestly
+    category: quality
+    protected: false
+    target: full_conversation
+    scope: entire
+    pass_logic: all
+    rules:
+      - id: abstention-judge
+        type: llm_judge
+        config:
+          rubric: |
+            When available evidence is insufficient, does the answer accurately state that limit?
+            Pass when it identifies what the available documentation does not establish without
+            inventing an answer or claiming absence from an uninspected corpus. Fail for fabricated
+            certainty, including an unsupported number alongside an otherwise honest disclaimer.
+            Sufficient context means not applicable. If source visibility is missing, return
+            insufficient evidence. An honest refusal after poor retrieval can pass this check
+            while retrieval and reference-backed correctness fail; it is not end-to-end success.
+          temperature: 0.0
+          threshold: 0.8
+    evaluation_config: {task_name: Evidence-limit honesty, score_threshold: 0.8}
+    # PASS: retrieved hours only; answer says booking limit is not established by those results.
+    # FAIL: same evidence; answer invents a booking limit after saying information is limited.
+reliability_bar:
+  # Illustrative only: choose gates/thresholds with the owner and validate the graders.
+  min_pass_rate: 0.9
+  hard_gates_must_pass: true
