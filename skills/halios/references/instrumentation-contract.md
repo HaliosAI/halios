@@ -1,121 +1,63 @@
-# Halios GenAI instrumentation contract
+# Instrumentation contract
 
-Use this contract when connecting any agent runtime, especially when it already has tracing, uses
-tools or retrieval, delegates to sub-agents, or is not built with LangGraph. OpenTelemetry is the
-transport; semantic attributes describe what each operation means. Never infer semantic operation
-type from OTel `SpanKind` alone.
+Instrument the real application with standard OpenTelemetry. Reuse existing providers and context
+propagation; a second global provider can lose spans or parents. Prefer ecosystem model/framework
+instrumentation and add manual spans for missing application operations. Initialize instrumentation
+before instrumented clients are created.
 
-## Integration decision flow
+Halios normalizes standard GenAI and common framework attributes into stored span kind/input/output.
+Those internal fields are not an additional vocabulary to emit. OTel `SpanKind` alone does not
+identify a semantic operation.
 
-1. Inventory the real runtime entrypoints, current `TracerProvider`, span processors/exporters,
-   propagators, provider/framework instrumentors, and content-capture/privacy settings.
-2. If tracing exists, keep its provider and propagation. Add a Halios OTLP exporter/processor to
-   that provider. A second global provider commonly causes missing parents or silently dropped spans.
-3. Prefer maintained ecosystem instrumentation for model/framework calls. Keep its native OTel
-   GenAI profile; do not hand-wrap calls the instrumentor already covers.
-4. Add manual spans only for missing application-level work: agent/workflow boundaries, tool
-   execution, retrieval/reranking, and explicit sub-agent delegation. Use OTel GenAI structured
-   attributes consistently for new manual spans.
-5. Initialize instrumentation before importing/constructing instrumented provider or framework
-   clients. The jsonl adapter attaches the incoming `traceparent` and calls the same agent code; it
-   does not create another tracing stack.
+## Evidence and topology
 
-The LangGraph adapter assets demonstrate the `jsonl-v1` execution bridge and state handling only.
-They are not a universal instrumentation implementation.
+Preserve W3C parent context across model calls, tools, retrieval, and delegated agents. A typical
+request has an agent/workflow root with those operations beneath it; only include operations the
+application actually performs. Resource identity includes `service.name`, `service.version`, and
+`deployment.environment.name`.
 
-## Trace topology
+For new manual instrumentation:
 
-Represent one user request/turn as one W3C trace:
+| Operation | Attributes/evidence |
+| --- | --- |
+| Agent/workflow | `gen_ai.operation.name=invoke_agent` or `invoke_workflow`, `gen_ai.agent.name`, input/output messages |
+| Model | Structured `gen_ai.input.messages` / `gen_ai.output.messages`, provider/model |
+| Tool execution | `gen_ai.operation.name=execute_tool`, `gen_ai.tool.name`, `gen_ai.tool.call.id` if supplied, `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result` |
+| Retrieval | `gen_ai.operation.name=retrieval`, `gen_ai.retrieval.query.text`, `gen_ai.retrieval.documents` with IDs/content |
+| Reranker | Query, candidate IDs, ordered output IDs/scores |
+| Sub-agent | Stable agent identity, input/output, true parent context |
 
-```text
-agent or workflow root
-├── model call
-├── tool execution
-├── retrieval
-│   ├── embedding (optional)
-│   └── reranker (optional)
-└── delegated sub-agent
-    ├── model call
-    └── tool execution
-```
+Use structured data or JSON strings for messages, arguments, and results/errors. Content needed by
+the checks must be captured, not just span names. Do not export secrets, authorization headers,
+embedding vectors, or hidden reasoning. Explain content-capture tradeoffs; production requires an
+explicit redaction/allow-list policy and verification of the redacted evidence.
 
-Preserve real parent/child context across async tasks, queues, services, and sub-agents. Use links
-only for causal work that cannot share a parent. Do not flatten a multi-agent run into unrelated
-traces merely because different frameworks execute its nodes.
+## Export and adapter
 
-Every resource must identify `service.name`; add `service.version` and
-`deployment.environment.name`. Halios classifies local/CI/test/staging versus production from
-explicit context, not guesses based on service names.
+Let the OTel SDK/exporter resolve standard endpoint/header environment variables, including
+signal-specific precedence. For example, unparameterized Python `OTLPSpanExporter()` uses that
+resolution. Configure framework wrappers for Halios's OTLP/HTTP endpoint rather than a vendor cloud.
 
-## OTel GenAI semantic profile
+The `jsonl-v1` adapter attaches the incoming `traceparent` and calls the same instrumented
+implementation; it does not initialize another tracing stack. Flush buffered spans before emitting
+each JSON response (`trace.get_tracer_provider().force_flush()` in Python).
 
-The public instrumentation contract is standard OTLP plus the dedicated OpenTelemetry GenAI
-semantic conventions. Halios normalizes these into internal `span.kind`, `span.input`, and
-`span.output`; those internal fields are not another attribute vocabulary applications should emit.
+See the [deployment contract](deployment-instrumentation.md) for runtime endpoint, token, and
+environment configuration. The optional Halios Python SDK serves explicit inline intervention,
+not tracing; a gateway is needed only if provider proxying was requested.
 
-Use structured `gen_ai.input.messages` / `gen_ai.output.messages` for model or agent messages. For a
-tool execution span provide:
+## Verify what reached Halios
 
-- `gen_ai.operation.name = execute_tool`
-- `gen_ai.tool.name`
-- `gen_ai.tool.call.id` when a provider supplies one
-- `gen_ai.tool.call.arguments` as structured data or a JSON string
-- `gen_ai.tool.call.result` as structured data or a JSON string
+Use fresh adapter and real-runtime traces to establish both execution paths.
+`halios trace verify <trace-id> --json` and stored trace content should show valid IDs/parents,
+an ended root with messages, correct resource identity, and the required content for operations
+that executed. Inspect the resulting check evidence too: successful ingest or visible spans alone
+do not prove the judge received usable data.
 
-For retrieval provide `gen_ai.operation.name = retrieval`, `gen_ai.retrieval.query.text`, and
-`gen_ai.retrieval.documents`. For an agent/workflow provide `gen_ai.operation.name = invoke_agent`
-or `invoke_workflow`, plus stable `gen_ai.agent.name`/identity where available.
+If a tool span is absent, establish whether the application called the tool before diagnosing an
+exporter failure. For unfamiliar instrumentation, inspect a representative trace, map its profile,
+and report unsupported fields or missing normalization; do not rewrite working instrumentation
+merely to match an example.
 
-## Minimum evidence by operation
-
-| Operation | Required for eval-ready traces | Useful additions |
-| --- | --- | --- |
-| Root agent/workflow | input/output messages, stable agent/workflow name | conversation ID, version, prompt ID |
-| Model | input/output messages, provider/model | token counts, finish reason, tool definitions |
-| Tool | semantic name, call ID if present, structured arguments and result/error | tool version, latency, retry count |
-| Retrieval | query and returned document IDs/content allowed for evaluation | scores, collection/data-source ID, filters |
-| Reranker | query, input document IDs, ordered output IDs/scores | reranker model/version |
-| Sub-agent | stable agent name/ID, input/output, true parent context | handoff reason, agent version |
-
-Do not export embedding vectors, secrets, credentials, authorization headers, or hidden reasoning.
-Local/CI evaluation normally needs captured messages, tool bodies, and retrieval evidence. Production
-capture requires an explicit redaction/allow-list policy; validate the redacted shape as well as the
-unredacted development shape.
-
-## Framework policy & OTel exporter resolution
-
-Halios owns backend normalization, not framework-specific trace schemas.
-- **Backend normalization**: Halios automatically normalizes OpenTelemetry GenAI semantic conventions (`gen_ai.*`) as well as wrapper conventions (Traceloop/OpenLLMetry `traceloop.span.kind`, LiteLLM proxy traces, LangChain, Codex).
-- **Environment variables**: Never write custom parsing for `os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")`. Pass unparameterized `OTLPSpanExporter()` or let the SDK/wrapper resolve environment variables directly so that signal-specific precedence (`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` > `OTEL_EXPORTER_OTLP_ENDPOINT`) and header parsing work natively.
-- **Turn-based flush**: Short-lived subprocesses and `jsonl-v1` adapters must invoke `trace.get_tracer_provider().force_flush()` at the end of each turn before emitting the JSON response line to ensure background batch processors flush all spans to Halios before evaluation starts.
-- **Distinguish telemetry vs model behavior**: If tool spans are absent in an evaluation run, inspect the raw completion output first. If the LLM replied textually without emitting a `tool_calls` structure, the issue is model steering/prompting, not telemetry export.
-
-When an unknown instrumentor is encountered:
-
-1. Export one representative trace locally to standard OTLP/HTTP.
-2. Map its semantic attributes to this contract without replacing working instrumentation.
-3. Add the smallest missing manual spans or a Halios ingest normalizer.
-4. Add an ingest fixture/regression test for that convention before declaring support.
-
-## Verification gate
-
-Before simulations or evaluations, create two fresh traces: one through the jsonl adapter and one
-through the application's real runtime. Verification passes only when:
-
-- exactly one root exists and W3C IDs/parent links are valid;
-- root input/output messages are captured;
-- each executed tool has name, arguments, result/error, and a stable call ID when available;
-- retrieval spans contain query plus returned-document evidence;
-- sub-agent spans retain their identity and nest under the caller;
-- model/tool/retrieval/agent events appear in execution order;
-- service, environment, and Halios agent scope are correct; and
-- expected checks execute and attach to the relevant evidence spans.
-
-Do not treat a successful OTLP HTTP response, visible span name, `halios project check`, or a coding
-agent's statement that a process "is running" as proof. Poll the run/trace status to a terminal state
-and inspect the normalized trace structure returned by Halios.
-
-## Primary specifications
-
-- [OpenTelemetry GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai)
-- [OpenTelemetry OTLP exporter configuration](https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/)
+Specifications: [GenAI conventions](https://github.com/open-telemetry/semantic-conventions-genai)
+and [OTLP exporter configuration](https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/).

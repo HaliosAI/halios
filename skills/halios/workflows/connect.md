@@ -1,110 +1,66 @@
 # Connect a repository
 
-## Architecture: Main Application Code vs. Adapter Bridge
+Aim for a reusable suite and a working connection to the actual application. Inspect its runtime,
+entrypoints, existing instrumentation, and tests; choose an integration that fits. Setup is not a
+request to deploy or redesign the agent.
 
-Halios connects to repositories using a clean two-tier separation:
-1. **Main Application / Agent Code (Permanent Instrumentation)**:
-   - Always instrument the **real application codebase and runtime entrypoints** (whether in Python, TypeScript/Node.js, Go, etc.).
-   - Configure OpenTelemetry SDK, framework/provider instrumentors (e.g. model clients, tool handlers, retrieval pipelines), and tool execution spans inside the real application code.
-   - This ensures telemetry is emitted consistently across all environments: local development, eval simulations, staging, and production.
-2. **The Test Adapter is ONLY a Thin Simulation Bridge**:
-   - The adapter exists solely for `halios eval run` simulations (`jsonl-v1` line-by-line JSON on stdin/stdout).
-   - The adapter **must invoke the already-instrumented agent implementation from the main codebase**.
-   - The adapter must **NEVER** contain its own separate tracer initialization, framework re-instrumentation, or duplicate tracing stack. Its only tasks are: extract/attach incoming W3C `traceparent`, invoke the agent implementation, call `force_flush()`, and write the assistant JSON response to `stdout`.
+## CLI and project
 
----
+The Skill and CLI are separate installs. Check `halios --version` and require 2.0.7 or newer.
+If installation is needed, explain that `haliosai-cli` will be a user-level tool and obtain the
+required approval. Use an existing isolated installer:
 
-## Steps
+```bash
+uv tool install 'haliosai-cli>=2.0.7'
+# For an existing uv installation:
+uv tool upgrade haliosai-cli
+# Or use an existing pipx:
+pipx install --force 'haliosai-cli>=2.0.7'
+```
 
-1. Inspect the agent entrypoint, prompt/tool definitions, runtime, and current OpenTelemetry setup.
-   Read existing discovery notes. For unresolved access, evidence, decisions, or verification,
-   follow [discovery](../references/discovery.md); retrieval-backed applications also use
-   [RAG authoring](../references/rag-evals.md). Do not stop unrelated safe setup work merely because
-   some domain coverage is pending, or claim setup complete when a required verification is blocked.
-2. Run `halios --version` and require version 2.0.7 or newer. If the CLI is absent or older, tell the
-   user before installing it:
+If neither exists, choose a suitable official isolated installer for the platform. Keep the CLI
+out of application dependencies. Verify the executable actually used; a user-requested branch
+installation also needs source-revision verification, since package versions may be identical.
+Do not fall back to an incompatible release or mutable default-branch source.
 
-   > The Halios CLI is not installed. I'll install `haliosai-cli` for your user account so it can be
-   > reused across projects. It will not be added to this project's runtime dependencies.
+Use `halios auth status`, then `halios auth login` only if needed. For a new project:
 
-   Then request approval for the user-level installation and follow this bounded decision path:
-   - Prefer an existing `uv`: `uv tool install 'haliosai-cli>=2.0.7'` (or `uv tool upgrade
-     haliosai-cli` for an existing older tool).
-   - Otherwise use an existing `pipx`: `pipx install --force 'haliosai-cli>=2.0.7'`.
-   - If neither is available, choose the least-invasive official installation method for an
-     isolated Python application installer on the current platform, then install `haliosai-cli`
-     through it. Prefer a user-level method that can supply Python 3.10+ without changing the
-     application's environment.
+```bash
+halios project init --agent <display-name> --command '<adapter-command>' --json
+```
 
-   Verify the result with `halios --version` before continuing. The executable should be available
-   to the current OS user across repositories, but not installed for every machine user or added to
-   the target application's `requirements.txt`, `pyproject.toml`, virtual environment, or runtime
-   image. If platform policy blocks the isolated installer or the package index cannot resolve
-   version 2.0.7 or newer, report the specific blocker and stop; never continue with the incompatible
-   public 1.x package or install mutable source from a default branch.
-3. Run `halios auth status`. If credentials are absent, run `halios auth login`; do not write them to
-   the project or ask the user to paste them into chat.
-4. Choose a display name for a fresh agent. Run
-   `halios project init --agent <new-name> --command '<adapter-command>' --json`. Never reuse an agent by
-   name or slug. Use `--link-agent <uuid>` only when the user explicitly requests existing state.
-5. Project initialization must report that a newly created agent has suite revision `0`, zero
-   checks, and zero scenarios. Immediately tell the user the agent display name, UUID, and dashboard
-   URL from the CLI `links` object; repeat all three in the final onboarding summary. Do not
-   construct the URL from the agent id yourself.
-   Project initialization uses Halios Managed AI by default and must not open provider setup or ask
-   for a key. A previously selected custom model is used when configured by the organization.
-6. Read [the instrumentation contract](../references/instrumentation-contract.md) and
-   [the deployment contract](../references/deployment-instrumentation.md), then configure
-   official OpenTelemetry SDK/exporter packages and provider/framework instrumentation in every real
-   application entrypoint that serves users or background agent work. Initialize tracing before
-   importing the provider/framework client. Do not count instrumentation added only to the eval
-   adapter as production instrumentation.
-   - Run `halios project instrumentation` for the non-secret deployment configuration.
-   - Tell the user to run `halios project instrumentation --show-secret` themselves and copy the
-     token directly into their deployment secret manager. Never invoke the secret-revealing form or
-     expose its output in chat.
-   - The endpoint is the same `<base-url>/v1/traces` URL used by the CLI. Set `service.name`,
-     immutable `service.version`, and `deployment.environment.name` in the actual runtime.
-   - `halios eval run` injects the eval endpoint/token into the adapter process automatically; that
-     does not configure a deployed application.
-   - **Environment Variable Resolution**: Never write hand-rolled `os.getenv()` string-parsing or splits.
-     Pass unparameterized `OTLPSpanExporter()` or let the OpenTelemetry SDK / wrapper read the environment
-     natively so standard OTel precedence (`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` > `OTEL_EXPORTER_OTLP_ENDPOINT`)
-     and header parsing operate as specified.
-   - **Framework Wrappers (Traceloop / OpenLLMetry / LiteLLM / LangChain)**: Halios backend ingest
-     automatically normalizes standard OpenTelemetry GenAI attributes (`gen_ai.*`) and common wrapper
-     spans (`traceloop.span.kind`, etc.). Configure wrappers to export via standard OTLP/HTTP to the
-     provided endpoint/headers rather than defaulting to vendor cloud endpoints.
-7. Follow the contract's existing-instrumentation decision flow. Do not install a second tracer
-   provider when the application already has one; attach Halios's OTLP exporter/processor to the
-   existing provider and preserve its context propagation. Prefer ecosystem instrumentation over
-   handwritten provider spans, then fill only missing application operations (tools, retrieval,
-   agent delegation) with manual spans.
-8. Enable GenAI content capture for local/CI eval-ready telemetry. Explain the privacy tradeoff
-   before enabling equivalent production capture. Provider instrumentation usually captures model
-   calls, not application tool bodies. Missing tool arguments/results, retrieval query/documents, or
-   sub-agent identity/topology is incomplete evaluation telemetry even when span names appear.
-   OTel `SpanKind` is not the semantic operation type; use one of the contract's accepted semantic
-   profiles.
-9. Adapt one template from `../assets/` to the repository's real imports and state model. The adapter
-   must call the same agent implementation as the real runtime and should only attach the incoming
-   `traceparent`; do not build a second instrumentation stack in the adapter.
-   - **Mandatory `force_flush()`**: In `jsonl-v1` adapters, spans are buffered asynchronously by
-     `BatchSpanProcessor`. The adapter **must** invoke `trace.get_tracer_provider().force_flush()`
-     at the end of each turn before printing the JSON response line to `stdout` so spans reach Halios
-     before evaluation runs.
-10. After the design workflow has configured the persistent server suite, run
-   `halios project check`, then verify two paths separately:
-   - Send one JSON request through the adapter and confirm its eval trace reaches Halios.
-   - Send one request through the application's real local/staging entrypoint and confirm a trace
-     with the correct non-evaluation `deployment.environment.name` reaches Halios.
-   For each trace, run `halios trace verify <trace-id> --json` and inspect the returned structure:
-   one root, valid parent links, ordered model/tool/retrieval/sub-agent children, captured required content,
-   and correct environment/service identity. Treat either missing or structurally incomplete trace
-   as incomplete instrumentation; do not proceed to simulations/evals.
-   - **Distinguish Telemetry Gaps from Model Decisions**: If a tool span is absent, check whether the
-     LLM actually emitted a structured `tool_calls` payload or responded conversationally in text.
-     A model's decision not to invoke a tool is an agent steering/prompt issue, not an exporter bug.
+A fresh agent starts at revision 0 with no checks/scenarios. Report its name, UUID, and returned
+dashboard link. Link existing state with `--link-agent <uuid>` only when the user chooses it;
+continue an already-linked project without creating another agent.
 
-Do not introduce the Halios gateway unless the user explicitly asks for provider proxying. Do not
-use proprietary SDK tracing when the framework can emit OTLP.
+Halios Managed supplies evaluation AI by default. Provider setup and customer LLM keys are not
+onboarding prerequisites; respect an organization's existing custom-model choice.
+
+## Application and adapter
+
+Use the [instrumentation contract](../references/instrumentation-contract.md) for OTel attributes
+and verification. Instrument the real application, reusing its provider and propagation. The
+`jsonl-v1` adapter calls that same implementation; it is a simulation bridge, not a second tracing
+stack or a deployed service.
+
+Adapt whichever example fits the state model:
+[stateless](../assets/langgraph_stateless_adapter.py) or
+[stateful](../assets/langgraph_stateful_adapter.py). The protocol is framework-independent:
+one JSON request/response per line, incoming W3C `traceparent`, `message` for stateful turns,
+`messages` for stateless history, and `trial_id` for session isolation. Flush telemetry before
+emitting the response; keep diagnostics off stdout. Determine `agent_context` from the application.
+
+`halios eval run` supplies the adapter's evaluation OTLP configuration. The real runtime needs its
+own configuration from `halios project instrumentation`; see the
+[deployment contract](../references/deployment-instrumentation.md) when wiring that path. Do not
+introduce a gateway or proprietary SDK tracing for an application that can emit standard OTLP.
+
+## Verification
+
+[Design and configure the suite](design-evals.md), then use [run evals](run-evals.md) for one smoke
+scenario. Verify fresh traces through both the adapter and the real runtime entrypoint, including
+the correct service/environment and evidence required by the checks. A local runtime can establish
+this path; do not claim staging/production verification without testing that environment.
+
+Explore integration failures as needed. If access, meaningful cases, or required verification
+cannot be obtained, preserve the useful setup and report the unresolved work.

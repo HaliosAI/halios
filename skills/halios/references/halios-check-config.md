@@ -1,107 +1,49 @@
-# Halios check configuration and quality contract
+# Check contract
 
-Read this reference before creating or reviewing `.halios/eval.yml`. Its purpose is to make check
-quality independent of whichever coding model happens to author the first draft.
+Use [eval.example.yml](../assets/eval.example.yml) for complete authoring syntax and the packaged
+eval schema for exact accepted fields. Checks group ordered rules; `pass_logic: all` requires
+all rules, while `any` is for genuine alternatives. A check needs at least one rule and allows
+at most one AI rule (`llm_judge` or `classifier`).
 
-## Configuration invariants
+## Targets and evidence
 
-- Every check has one target and a compatible scope:
-  - `user_message` or `assistant_message`: `all`, `last_n`, `first_n`, or `after_tool`.
-  - `tool_usage`: `tool_name`, `input_arguments`, `output_values`, or `tool_call_context`.
-  - `full_conversation`: `entire`.
-- `after_tool` requires `scope_params.tool_name`.
-- A check must contain at least one validation rule and at most one AI rule (`llm_judge` or
-  `classifier`). Split independent semantic criteria into separate checks.
-- `evaluation_config.task_name` is required. Use a stable, human-readable task name and a score
-  threshold from 0 to 1.
-- Choose the simplest evaluator that can measure the requirement correctly. Deterministic rules are
-  for mechanically observable structure and exact facts; classifiers fit established classification
-  problems; LLM judges fit meaning or outcome quality. If a valid paraphrase could fail a regex or
-  string match, the requirement is semantic and needs a focused semantic evaluator instead.
+| Target | Scopes |
+| --- | --- |
+| `user_message`, `assistant_message` | `all`, `last_n`, `first_n`, `after_tool` |
+| `tool_usage` | `tool_name`, `input_arguments`, `output_values`, `tool_call_context` |
+| `full_conversation` | `entire` |
 
-## Deterministic rule polarity
+Use `scope_params.n` for first/last counts and `scope_params.tool_name` for `after_tool` or tool
+filtering (`tool_name` is also an authoring shorthand). A rule's `field` selects a nested tool
+value, e.g. `filters.category`. Each check needs `evaluation_config.task_name` and a threshold.
 
-- Violation detectors such as forbidden terms, PII patterns, competitor mentions, or prohibited
-  claims use `pass_condition: not_match`.
-- Required phrases or exact allowed values use `pass_condition: match`.
-- `not_empty`, `not_null`, `exists`, numeric comparisons, and `one_of` encode their own direction;
-  do not add `pass_condition` to them.
-- `pass_logic: all` means every rule is a requirement. Use `any` only when the rules represent
-  genuinely interchangeable acceptable outcomes.
+Choose a scope containing the evidence the question requires. `assistant_message/all` cannot
+establish a relationship to unseen user requests or sources. `after_tool` includes a post-tool
+window, but verify its captured content; a configured scope is not proof that evidence arrived.
 
-## Semantic design rules
+## Rules and polarity
 
-1. **Preserve requirement polarity.** Translate the product rule into the passing outcome before
-   writing the grader. “Do not recommend competitor products” must grade refusal, redirection, or
-   staying within the supported catalogue. It must never become “recommend these preferred
-   competitor attributes.”
-2. **Grade the invariant, not one example.** Product names, colors, cities, or example values from a
-   scenario are evidence inputs, not the policy itself. A rubric should still work for an unseen
-   competitor, product, wording, or turn order.
-3. **One criterion per LLM rubric.** If a rubric asks about policy compliance, factual grounding,
-   and tone, split it into three checks.
-4. **Grade outcomes, not brittle paths.** Require the correct result, not an exact tool sequence or
-   assistant sentence unless the sequence/text is itself a contractual requirement.
-5. **Give judges an out (Tri-State N/A).** A condition-dependent rubric must explicitly state:
-   "If [condition] does not occur in the conversation, return insufficient evidence."
-   When returned, Halios marks the check execution as `status: not_applicable` (`score: null`,
-   `passed: null`) and excludes it from the pass-rate denominator.
-6. **Protect hard requirements.** Safety, privacy, policy boundaries, and strict tool schemas should
-   be protected checks and should have adversarial scenarios.
+Use deterministic rules for structure/exact facts, focused LLM judges for meaning, and classifiers
+when an appropriate classification model exists. Valid paraphrases should not fail a semantic
+requirement because of a regex.
 
-## Scenario evidence & context partitioning
+- Violation detectors: `pass_condition: not_match`. This includes `json_schema`, which fires on
+  invalid data.
+- Required matches, e.g. `equals`: `pass_condition: match`.
+- Presence and numeric comparison rules encode their own direction; no `pass_condition`.
 
-For every important invariant, include:
+Protect actual hard requirements such as safety, policy boundaries, and strict tool contracts.
+Do not weaken those requirements to make a subset pass.
 
-- a positive case where the behavior should occur;
-- a counterexample where a plausible wrong behavior should fail;
-- a boundary or ambiguous case;
-- an adversarial case for protected policy;
-- a multi-turn continuation when the behavior could degrade after the first response.
+## Judge quality
 
-### Context partitioning & archetype rules:
-- **`agent_context`**: State delivered directly to the target application/adapter at runtime. The scenario designer must inspect the target agent's codebase/adapter to determine what runtime parameters the agent expects (e.g. `channel`, `workspace_root`). Leave `{}` if none.
-- **`simulator_context`**: User-private facts/preferences the simulator may disclose in conversation, not grader-only ground truth. Backend-only storage does not prevent the simulator from saying an answer key aloud. Never commit real credentials.
-- **Conversational / Exploratory scenarios**: Use a natural opening appropriate to the task, such as a greeting or concise question. Let the agent elicit information when that interaction is under test. Write `arc_messages` as behavioral intent milestones, not rigid scripts. Fixed knowledge questions need no greeting/thank-you exchange: use `max_turns: 1` with no follow-up arc and a supported generation mode.
-- **Task-Oriented / Execution scenarios**: Preloading complete task specifications, instructions, or repo files in `initial_message` and `agent_context` is natural and standard.
-- Scenarios must not prescribe the desired assistant wording in `constraints`.
+A rubric should state one criterion, what passes/fails, and when evidence is insufficient or the
+condition does not apply. Grade the actual requirement across plausible wording/entities, not one
+example or an unnecessary tool sequence. For instance, a competitor boundary should assess refusal
+or redirection to supported options, not prescribe a particular brand/color recommendation.
 
-## Mandatory review questions
-
-For each check, answer all of the following before configuration:
-
-1. Which exact goal, risk, policy, tool contract, or user-facing claim does it cover?
-2. What behavior makes it pass? State this without referring to the current scenario example.
-3. What realistic wrong behavior makes it fail?
-4. Is the rule direction correct for that pass/fail statement?
-5. Would the check still work with different entities and wording?
-6. Is there at least one scenario capable of passing it and one capable of failing it?
-7. If it is an LLM judge, does it ask one question and define insufficient evidence?
-
-Flag the suite as not ready when any answer is missing. Do not accept “the YAML validates” as a
-quality argument.
-
-For proposed work outside the executable suite that cannot yet be supported, use
-[discovery notes](discovery.md) instead of placeholder checks or fabricated references. Do not
-remove existing requirements to obtain a pass. For retrieval-backed requirements, read
-[RAG authoring](rag-evals.md): citation syntax, factual support, task completion, and source/policy
-correctness are distinct; each needs the right evidence. A discovery gap cannot excuse missing
-required evidence in an executed check.
-
-## Canonical competitor-policy example
-
-Bad:
-
-> Assistant must recommend solid Black or Brown alternatives and exclude Blackberry/Red for IKEA
-> requests.
-
-This overfits example attributes and still instructs the assistant to recommend competitor goods.
-
-Good:
-
-> When the user asks for a competitor product, pass only if the assistant does not recommend or
-> compare specific competitor products and instead redirects to supported catalogue options or
-> clearly states the boundary. Return insufficient evidence when no competitor request occurs.
-
-Pair this rubric with a positive supported-product request, a direct competitor request, an
-ambiguous brand mention, and a persistent multi-turn competitor request.
+Use realistic correct and incorrect examples to check the grader, with boundary or multi-turn cases
+where they matter. A source-dependent rubric needs source evidence; a plausible verdict without it
+is not verification. Distinguish missing evidence from legitimate non-applicability, inspect actual
+execution reasons and gate results, and report discrepancies. Scenario variety and schema validity
+alone do not establish judge reliability.

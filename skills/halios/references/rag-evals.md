@@ -1,79 +1,40 @@
-# Evidence-aware RAG authoring
+# RAG evidence and evaluation
 
-Read when code/tools show retrieval, document lookup, catalog search, or another external knowledge
-source feeding an answer—even if the prompt is generic or never says RAG. RAG can be one capability
-of a larger application; retain its other requirements and use [discovery.md](discovery.md) for gaps.
+Use for retrieval-backed answers, including catalog search and document lookup.
 
-## Bootstrap without guessing the corpus
+Existing benchmarks, real failures, and bounded source samples are useful starting points.
+Inspect the application's data-access path. A generic `query` tool does not establish what its
+corpus contains; if no seeds or source access are available, ask for help and record the gap.
+Reuse existing authorized readers; a new connector or evaluation framework is not a prerequisite.
 
-- Start with user examples, real failures/traces, or bounded accessible source samples. Inspect the
-  existing data-access implementation; a tool accepting only `query` does not tell you what to ask.
-- If a source supports listing/sampling, use a small authorized sample with source locators. Prefer
-  existing application readers/extraction over new connectors. Do not scan/export the whole corpus.
-- If only search is available, use known questions/topics as seeds. With no seeds or metadata, ask
-  for representative questions, a source sample, or access details and record affected coverage.
-  Random queries or asking the assistant what it knows do not establish corpus contents.
-- Questions supplied by the user are search seeds, not answer keys. Generated use cases are drafts;
-  confirm their domain assumptions. Synthetic fixture documents test the fixture, not the real corpus.
-- Check expected facts against source text, preserving units, qualifiers, and effective versions.
-  A missing search result does not prove the corpus has no answer. Search-only samples are biased
-  toward what the current retriever finds; say so. Bound reads and obtain authorization for egress;
-  never ask for credentials in chat or install Ragas/DeepEval as a prerequisite.
+Verify expected facts against source text, including units and policy versions. Questions are
+seeds, not answer keys; synthetic fixtures test their own corpus. An empty search does not prove
+absence from the corpus, and search-derived samples reflect the current retriever's blind spots.
 
-## Author a small, meaningful suite
+Choose the relationships relevant to the application:
 
-Choose a few dimensions from observed requirements/evidence (such as customer tier, policy version,
-or missing information), select useful valid combinations, then phrase natural questions. This is
-an authoring technique, not an exhaustive matrix or new generation service. Include known failures
-and plausible counterexamples; verify generated expectations separately from question diversity.
-
-Use the existing deterministic and focused LLM-judge checks. Ask separately:
-
-| Question | Evidence the grader needs |
+| Concern | Evidence needed |
 | --- | --- |
-| Did the search preserve the user's relevant constraints? | User/history plus tool arguments |
-| Are the returned results useful for the information need? | Question/query plus returned content |
-| Are answer claims supported? | Answer plus the evidence actually available at that point |
-| Does the answer address the request? | User request plus answer |
-| Is it correct for the applicable policy/domain? | Reliable expected facts/version rules where needed |
+| Query preserves the request | User/history and tool arguments |
+| Retrieval is useful | Question/query and returned content |
+| Answer is grounded; citations support claims | Answer and preceding source evidence |
+| Answer completes the task | Request and answer |
+| Domain/policy correctness | Applicable source-backed facts and versions |
 
-Use a supported context-bearing scope; assistant text alone cannot establish source support.
-Account for follow-up document fetches and repeated tool calls: do not borrow evidence from a later
-or unrelated call. Citation syntax is not citation validity, nonempty search is not good retrieval,
-and a grounded answer can still repeat a superseded policy. Honest abstention can be good response
-behavior while retrieval or task completion still fails; do not reward refusal on answerable cases.
+These are diagnostic options, not a mandatory metric bundle. Nonempty queries and well-formatted
+citations are not evidence of relevance or truth. A grounded answer may still be incomplete or use
+an obsolete policy; refusal is not success on an answerable question.
 
-Use deterministic checks for actual structure/exact facts, not proxies for meaning. Keep each
-semantic rubric focused, with passing/failing examples and an insufficient-evidence outcome. Review
-judge verdicts against human-labeled counterexamples before trusting them as release gates; a few
-examples are a sanity check, not a calibrated accuracy claim. Missing required evidence is a gap,
-not a reason to claim the check passed.
+Inspect what evidence actually reaches the chosen judge scope. Account for repeated retrievals
+and full-document fetches; later results cannot justify earlier claims. Missing required evidence
+is unresolved verification even when the judge returns N/A. Check useful pass/fail counterexamples
+before relying on a judge.
 
-Reference-dependent tests need a supported grading path. The existing scenario `simulator_context`
-is not grader-only storage: a simulated user can disclose its contents. Do not hide expected answers
-there, in `agent_context`, or in discovery notes. Use a correctly scoped existing rubric only when
-it can express the requirement; otherwise record the missing capability rather than fake support.
+Use the [scenario/check contracts](../workflows/design-evals.md) for fixed questions and context
+separation. Reference answers need a supported grader path, not simulator-visible storage.
+Ranking metrics require labels and an appropriate runner; reranker claims need candidate/final
+rankings. Record unsupported capabilities without pretending arbitrary tool-boundary resume,
+complete recall, or new metrics are already available.
 
-For a fixed knowledge question, use exact `initial_message`, `max_turns: 1`, and no follow-up arc;
-keep an existing supported generation mode. Do not invent `single-turn` as a schema enum or require
-a greeting/thank-you exchange. Use multi-turn simulation when clarification or recovery matters.
-Do not claim general n−1/tool-boundary resume support. Fresh agent decisions and fixed tool inputs
-test different things.
-
-Standard retrieval metrics are useful when their inputs and runner exist; do not attach a mandatory
-metric bundle or ask an LLM to calculate ranking arithmetic. A known source hit is not full recall;
-unlabeled documents are not automatically irrelevant. Reranker-specific claims require observing
-candidate and final rankings. Unsupported metrics/stages remain explicit discovery gaps, not a new
-engine or instrumentation overhaul unless the user requests that work.
-
-After an authorized run, separate label mistakes, grader mistakes, missing telemetry, and agent
-failures. Propose focused regressions from observed failures within the user's scope, not automatic
-reruns or prompt repairs. The output stays in the existing suite plus unresolved discovery notes.
-
-## Basis
-
-- [Hamel's evals FAQ](https://hamel.dev/blog/posts/evals-faq/): error analysis, source-backed
-  questions, bounded dimensional generation, and validating judges against human judgments.
-- [Jason Liu's six RAG evals](https://jxnl.co/writing/2025/05/19/there-are-only-6-rag-evals/):
-  distinguish question/context/answer relationships. Use them as diagnostic questions, not six
-  compulsory checks or a claim that they cover every operational failure.
+Further rationale: [Hamel's FAQ](https://hamel.dev/blog/posts/evals-faq/) and
+[Jason Liu's RAG eval relationships](https://jxnl.co/writing/2025/05/19/there-are-only-6-rag-evals/).

@@ -21,7 +21,7 @@ Interpret an empty failure result carefully:
 - production traces but no check executions: confirm the expected checks are attached and runtime
   evaluation/finalization is enabled;
 - check executions but no failures: Halios has no failing evaluator evidence in the queried window;
-- unclassified or staging traces: fix `deployment.environment.name`; do not relabel them in analysis.
+- unclassified or staging traces: report the `deployment.environment.name` mismatch; do not relabel them in analysis.
 
 For each representative failure:
 
@@ -30,10 +30,10 @@ For each representative failure:
    Preserve `links.trace` for the final human-review handoff.
 3. Identify the user intent, deployed `service.version`, failure mechanism, check/rubric, and affected
    tool/retrieval/policy path—not merely the old assistant text.
-4. Run `halios scenario generate --from-trace <trace-id>` to create a local Git draft.
-5. Review its scenario id, goal, first turn, constraints, risk label, and arc hints; remove sensitive
-   or production-specific values.
-6. Run the new scenario against the current agent, then include it in the protected regression bank.
+
+If regression authoring was requested, `halios scenario generate --from-trace <trace-id>` creates
+a local draft. Review its intent and starting conditions and remove sensitive values. Configure
+or execute it only when that action is in scope; diagnosis alone stops at evidence and recommendations.
 
 Use `halios eval report <run-id> --failures --json` when the failure belongs to a bounded run. For a
 blocked GitHub release, follow [the CI diagnosis workflow](ci.md). Preserve run, scenario, trace,

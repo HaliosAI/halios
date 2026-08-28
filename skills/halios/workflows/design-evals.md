@@ -1,97 +1,58 @@
 # Design evals
 
-Before authoring or reviewing checks, read the bundled
-[`halios-check-config`](../references/halios-check-config.md) contract completely. It is part of
-this skill, not an optional external dependency.
+Discover the application's goals and failure modes from its code, prompts, tests, examples, and
+available evidence. Reuse useful cases; explore further where they leave important uncertainty.
+For retrieval-backed answers, use [RAG guidance](../references/rag-evals.md). Missing information
+belongs in [discovery notes](../references/discovery.md), not invented domain expectations.
 
-1. Inspect the system prompt, tool schemas, routes, policies, error handling, and user-facing claims,
-   together with accessible examples/evidence and existing `.halios/discovery.yml`. Follow
-   [discovery](../references/discovery.md) for unresolved requirements or work. If retrieval/search
-   supplies knowledge for answers, follow [RAG authoring](../references/rag-evals.md) before drafting
-   cases; a generic prompt and `query` parameter are not domain evidence. Continue only supportable
-   work and ask for missing examples, sources, decisions, or access details when needed.
-2. Edit `.halios/eval.yml` first. Capture concrete goals, risks, stable check IDs, and a measurable
-   reliability bar. Read and adapt [`../assets/eval.example.yml`](../assets/eval.example.yml) as a
-   structural example; it is a pattern library, not a checklist of rules every agent should have.
-   The CLI validates its packaged `halios_cli/schemas/eval.schema.json`.
-3. Map each critical requirement to the simplest evaluator that can measure it correctly:
-   - Use deterministic rules for mechanically observable facts such as presence, exact structured
-     values, numeric bounds, tool arguments, JSON shape, or an intrinsically formatted identifier.
-   - Do not use regex or string matching as a proxy for meaning. If a valid paraphrase could fail
-     the rule, use a semantic evaluator instead.
-   - Use a focused LLM judge when correctness depends on meaning, context, policy adherence, task
-     completion, or acceptable paraphrasing. Keep one semantic criterion per rubric.
-   - Add only checks that map to an actual goal, risk, policy, or tool contract. Do not copy every
-     rule form from the example merely because it is available.
-4. Mark safety, policy, and strict tool/schema checks as protected hard gates.
-5. Edit `.halios/scenarios.yml` using the canonical field names. The CLI validates the packaged
-   `halios_cli/schemas/scenarios.schema.json` JSON Schema before review and before every run. The
-   schema is strict: use `title`, `goal`, `initial_message`, `agent_context`, `simulator_context`,
-   `persona`, `constraints`, `arc_messages`, `risk_label`, and bounded `max_turns`.
-   `risk_label` must be `benign`, `boundary`, or `adversarial`; happy paths and tool failures are
-   scenario descriptions, not additional enum values. Draft-only work still uses this contract.
+## Author the existing suite
 
-   **Context Partitioning**:
-   - `agent_context`: State intentionally available to the target application at startup (e.g., `channel`, `workspace_root`, `account_tier`). The author/coding agent **must inspect the target agent's code, entrypoint, or adapter** to determine which runtime attributes the agent expects. Halios stores this and delivers it to the agent adapter. If the agent needs no initial attributes, use `{}`.
-   - `simulator_context`: User-private facts, synthetic test credentials, and preferences the simulated user may disclose naturally. It is not passed directly to the application, but the simulator can reveal its contents in conversation; do not store grader-only expected answers here. Supply relevant user facts for multi-turn scenarios, not invented answer keys to satisfy validation. Never commit real secrets.
+- `.halios/eval.yml`: goals, risks, checks/rubrics, and the reliability bar.
+- `.halios/scenarios.yml`: reusable starting conditions.
+- `.halios/config.toml`: project identity and adapter configuration.
 
-   **Scenario Archetype Guidelines**:
-   - **Conversational / Exploratory Agents (Chatbots, Customer Support, Sales, Intake)**:
-     - `initial_message`: Keep opening sentences natural and minimal (e.g., `"Hi"`, `"Hello"`, or a single introductory inquiry). Do **not** preload customer names, emails, phone numbers, and multi-part questions into the opening sentence unless the scenario is explicitly an adversarial test, stress test, or specifically testing preloaded user dumps.
-     - `arc_messages`: Write **behavioral guidelines and milestone intents** (e.g., *"Provide contact details from simulator_context when asked"*, *"Confirm email when prompted"*, *"Ask what alternatives exist"*), not rigid verbatim transcripts.
-   - **Task-Oriented / Execution Agents (Coding Agents, CI/CD Runners, Workflow Automations)**:
-     - The interaction is not exploratory. Preloading complete task specifications, issue descriptions, repository files, or input payloads directly into `initial_message` and `agent_context` is natural and standard practice.
-   - **Fixed knowledge questions**: Use a natural, complete `initial_message`, `max_turns: 1`, no
-     follow-up arc, and an existing supported generation mode. Do not add greeting/thank-you turns.
+Read the [check contract](../references/halios-check-config.md) when designing checks.
+[eval.example.yml](../assets/eval.example.yml) supplies valid patterns, not required checks.
+Choose cases and dimensions that expose plausible mistakes; there is no mandatory domain matrix
+or prescribed number of scenarios. The current CLI does require an adversarial scenario.
 
-   ```yaml
-   version: 1
-   scenarios:
-     - id: customer-inquiry-multi-turn
-       title: Customer material honesty inquiry
-       goal: Verify assistant follows onboarding, states material boundaries, and offers valid alternatives
-       initial_message: Hi
-       agent_context:
-         channel: web-chat
-       simulator_context:
-         customer_name: Jane Smith
-         email: jane@example.com
-         phone: "555-987-6543"
-         desired_material: genuine leather
-         willing_to_share_email: true
-       persona: A quality-conscious shopper looking specifically for leather furniture
-       constraints:
-         - Must confirm customer details before starting session
-         - Must state company does not carry genuine leather
-         - Must only offer vinyl/polyurethane alternatives and exclude fabric/tweed
-       arc_messages:
-         - Provide contact details from simulator_context when asked
-         - Confirm email when asked
-         - Ask if genuine leather chairs are available
-         - Ask what alternatives are available
-         - Conclude and exit once alternatives are presented
-       risk_label: boundary
-       generation_mode: simulation-with-arc-hint
-       max_turns: 6
-   ```
-6. Select a few meaningful case dimensions from requirements/evidence, choose valid combinations,
-   then write natural inputs. Include relevant happy paths, ambiguity, tool failures, adversarial
-   cases, and known regressions without a compulsory Cartesian product. Verify expected facts
-   against sources separately from question diversity. Do not invent expected assistant wording
-   when a behavioral rubric is the real need.
-7. Run `halios eval review --json`. Treat every `schema_errors` and `quality_gaps` entry as blocking.
-   Then perform the semantic review from `halios-check-config`: verify requirement polarity,
-   outcome-vs-example generality, one criterion per rubric, and positive/negative scenario evidence.
-   Show the user the resulting contract when it contains business judgments that require
-   confirmation. A schema-valid suite is not automatically a meaningful suite.
-   Review `discovery` separately: open gaps or invalid notes are not executable check failures,
-   but they must appear in the handoff. Absence of notes is not complete coverage. Do not weaken
-   existing required checks or treat missing required telemetry as an advisory gap to get a pass.
-8. Run `halios project configure --json`. It atomically creates one persistent server revision containing
-   both checks/rules and scenarios, then rewrites both YAML files from the canonical response. Do
-   not continue unless the command reports materialization verified with the expected check, rule,
-   rubric, and scenario counts. Preserve the CLI-provided `links.scenarios` and `links.rules` for
-   the final review handoff so the user can inspect the materialized suite in Halios.
-9. If configure reports a revision conflict, note the recovery location, accept the automatic
-   server-to-local refresh, compare the rejected proposal with the refreshed checkout, and reapply
-   intended changes against the new revision. Never restore the rejected files wholesale.
+Use the schema's risk labels: `benign`, `boundary`, `adversarial`. Supported generation modes are
+`simulation` and `simulation-with-arc-hint`. A fixed question can be as small as:
+
+```yaml
+version: 1
+scenarios:
+  - id: missing-topic
+    title: Request with no topic
+    goal: Handle an underspecified document request
+    initial_message: Can you help me find something in the documents?
+    agent_context: {}
+    simulator_context: {}
+    risk_label: boundary
+    generation_mode: simulation
+    max_turns: 1
+```
+
+For single-turn cases, omit `arc_messages` entirely; the schema rejects an explicit empty array.
+For multi-turn cases, use `arc_messages` for user intentions and `simulator_context` for relevant
+user-private facts. Open naturally for the task; greetings and closing exchanges are not required.
+Constraints shape the simulated user, while checks grade the assistant.
+
+`agent_context` is delivered to the application and must fit its runtime contract. The simulator
+can reveal `simulator_context` in dialogue, so neither field is grader-only answer storage.
+A scenario goal describes intent; it is not an executable assertion. Put expected outcomes in
+checks with an evidence path that can actually evaluate them.
+
+## Review and configure
+
+`halios eval review --json` validates local files against the packaged
+`halios_cli/schemas/{eval,scenarios}.schema.json`. Fix schema/quality errors without padding cases
+with meaningless fields. Separately assess whether the checks can distinguish realistic correct
+and incorrect behavior; `ready` is not proof of adequate coverage.
+
+When configuration is in scope, `halios project configure --json` atomically publishes both YAML
+files as one server revision and rewrites them from the canonical response. Require its
+materialization verification. Draft-only work stops before this step.
+
+On revision conflict, Halios preserves the rejected proposal and refreshes the checkout. Reconcile
+intended changes with that current state. Local edits are inactive until configuration succeeds.

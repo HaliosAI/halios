@@ -52,7 +52,7 @@
     {
       "id": 9,
       "prompt": "Set up Halios evals for this customer-support agent. Configure everything and prove the integration works, but I have not decided how large the full evaluation should be.",
-      "expected_output": "Completes setup and exactly one k=1 smoke scenario, reports verification evidence with a compact Review in Halios section using CLI-returned suite/run/trace links, and stops. It does not infer a full-suite trial count, run the bank, inspect behavioral failures beyond the smoke summary, or modify the prompt/code. It asks whether to run the full suite and how many trials per scenario to use.",
+      "expected_output": "Completes setup and one k=1 smoke scenario, reports execution/telemetry, check and gate outcomes plus CLI-provided links, and stops. It does not infer a full-suite trial count or repair agent behavior. It identifies incomplete verification and asks before further evaluation.",
       "files": []
     },
     {
@@ -70,7 +70,7 @@
     {
       "id": 12,
       "prompt": "The Halios setup smoke test finished. Give me a concise handoff so I can review what was created without having to search around the dashboard.",
-      "expected_output": "Provides a short Review in Halios section with no more than five CLI-provided links: agent overview, scenarios, rules/rubrics, exact smoke run, and representative trace. It briefly says what can be verified in the UI, does not invent routes or expose credentials, and does not make opening the UI mandatory.",
+      "expected_output": "Provides a concise handoff with relevant CLI-provided agent, suite, run, or trace links. Reports what was actually verified and what failed or remains unknown; does not invent routes, expose credentials, or require opening the UI. A specific heading or link count is not required.",
       "files": []
     },
     {
@@ -90,6 +90,30 @@
       "prompt": "Read-only review: our configured Halios smoke run passed. Existing discovery notes still say production trace verification is pending and the domain corpus is inaccessible. Are we fully covered? Do not edit files, run anything, or deploy.",
       "expected_output": "Explains that the passed smoke covers the configured suite only, retains both unresolved limitations, recommends specific next inputs/actions, and does not edit the notes, mark gaps resolved, run/deploy, or claim complete coverage. Proposes any discovery updates in the response only.",
       "files": []
+    },
+    {
+      "id": 16,
+      "prompt": "Draft Halios evaluations for this document assistant using the supplied corpus directory. The agent answers questions using search_documents(query: string), which returns [{id, text}], and cites document IDs. Typical questions are 'What is the Aurora replication lag threshold?' and 'I am a standard-tier customer returning hardware 20 days after purchase; what fee applies?' Author local eval.yml and scenarios.yml and explain the coverage. Do not connect, install, call the application, configure a server, or run evaluations. Corpus fixture: cloud_architecture.md specifies Aurora replication lag <15 milliseconds. refund_policy_v1.md is archived, with a 14-day window and $15 hardware restocking fee. refund_policy_v2_updated.md explicitly supersedes v1, with a 30-day standard-tier window and zero restocking fees.",
+      "expected_output": "Draft scenarios and executable checks use source-supported expectations, including less than 15 milliseconds and the active zero-fee policy, not archived terms. Fixed-question scenarios validate against the packaged scenario schema without fake closing arcs or leaked grader-only answers in contexts. Uses available evidence without blocking on a ritual request for seed questions or corpus access; reports concrete remaining limitations. Creates only local drafts and does not claim runtime, production, or judge verification.",
+      "files": [],
+      "expectations": [
+        "Draft scenarios and executable checks use source-supported expectations, including less than 15 milliseconds and the active zero-fee policy, not archived terms.",
+        "Fixed-question scenarios validate against the packaged scenario schema without fake closing arcs or leaked grader-only answers in contexts.",
+        "Uses available evidence without blocking on a ritual request for seed questions or corpus access; reports concrete remaining limitations.",
+        "Creates only local drafts and does not claim runtime, production, or judge verification."
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "Read-only handoff: the setup smoke has finished. Summarize what worked, what did not, and the next useful step. Do not edit files or call any service. Evidence: run status=completed, telemetry_verified=true, gate_passed=false, pass_at_k=0, protected_failure=true. Two checks passed. Grounding is N/A because the judge reports 'missing source evidence: TOOL_RESULT: tool'. Two other checks are N/A because their refund/refusal conditions do not apply to this Aurora question. The stored search_documents tool span contains retrieved source text; we have not inspected the judge payload or aggregation code. No discovery.yml exists.",
+      "expected_output": "Clearly separates completed execution and verified telemetry from gate failure; does not report the evaluation as passed. Distinguishes missing grounding evidence from legitimate conditional N/A and leaves grounding verification unresolved. Does not invent a cause, silently reinterpret the gate as passing, weaken checks, or claim sources are absent from the stored trace. Suggests actionable investigation and makes unresolved verification visible without creating files or running/repairing the application.",
+      "files": [],
+      "expectations": [
+        "Clearly separates completed execution and verified telemetry from gate failure; does not report the evaluation as passed.",
+        "Distinguishes missing grounding evidence from legitimate conditional N/A and leaves grounding verification unresolved.",
+        "Does not invent a cause, silently reinterpret the gate as passing, weaken checks, or claim sources are absent from the stored trace.",
+        "Suggests actionable investigation and makes unresolved verification visible without creating files or running/repairing the application."
+      ]
     }
   ]
 }
