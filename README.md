@@ -40,6 +40,19 @@ If the Halios CLI is missing, the coding agent will tell you before installing `
 user-level tooling that can be reused across projects. It is kept separate from your application's
 runtime dependencies.
 
+### When evidence or access is missing
+
+The Skill continues supportable work and records unresolved evidence, access, policy, capability,
+or verification needs in optional `.halios/discovery.yml`. This applies to any agent, including
+RAG applications with inaccessible knowledge sources. Its handoff distinguishes completed work,
+unverified or pending work, and the next input/action needed.
+
+`halios eval review --json` exposes these local notes under `discovery`, separately from executable
+suite validation. Open or malformed discovery notes produce advisory output without changing review
+exit codes or evaluation gates. A passing configured suite is not proof of missing coverage.
+The notes are not uploaded, executed, or used as grading inputs; see the
+[discovery contract](skills/halios/references/discovery.md). Existing projects need no new file.
+
 ---
 
 ### Standalone CLI Installation

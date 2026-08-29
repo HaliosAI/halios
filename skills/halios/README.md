@@ -40,8 +40,12 @@ summary. The harness asks before running the full suite so the user can choose t
 per scenario. Running, diagnosing, and fixing are separate scopes; none implicitly starts an
 open-ended repair loop.
 
+The entry point routes to task-specific references. It keeps Halios contracts and permission
+boundaries explicit while leaving exploration and case selection to the coding agent. Unresolved
+evidence or verification belongs in local discovery notes, not invented expectations.
+
 CLI commands return a structured `links` object for durable Halios resources. The skill uses those
-links in a compact **Review in Halios** handoff after setup, evaluation, diagnosis, and optimization,
+links in a concise handoff after setup, evaluation, diagnosis, and optimization,
 so users can inspect scenarios, rubrics, runs, and traces without leaving the coding-agent workflow
 to search through the UI manually.
 

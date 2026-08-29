@@ -27,7 +27,7 @@ Set `HALIOS_BASE_URL` as a repository/environment variable only when not using t
 Do not expose any of these values to fork-authored pull requests. Use an environment with approval
 or a separately permissioned trusted workflow when outside contributors are in scope.
 
-Run, in order:
+For example, with the repository's agreed trial count and reliability bar:
 
 ```bash
 halios project check
@@ -86,5 +86,5 @@ Report the exact category and evidence:
 - `pass_at_k < threshold` or `gate_passed = false`: reliability missed the configured bar;
 - publish/attestation error: the trusted default-branch publication step was not authorized.
 
-Do not recommend a blind rerun. Inspect the failing scenario and trace, fix the relevant prompt,
-tool, retrieval, policy, telemetry, or workflow setup, then rerun that scenario plus protected cases.
+Inspect the failing scenario and trace and recommend a focused change rather than a blind rerun.
+Apply a fix and rerun affected/protected cases only when authorized.

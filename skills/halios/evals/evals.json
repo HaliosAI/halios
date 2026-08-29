@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "Setup agent evaluation for this project using Halios.",
-      "expected_output": "Inspects the agent, installs the Halios CLI if missing, uses separate auth/project setup, writes only the three-file skeleton, configures stock OTel plus a jsonl-v1 adapter, authors evals/scenarios, and runs exactly one fresh k=1 smoke scenario. It then summarizes the agent, suite, run, trace, telemetry, and check evidence; includes a compact Review in Halios section using CLI-provided agent, scenario, rules/rubrics, exact run, and representative trace links; stops without running the full bank or editing agent behavior; and asks whether to run the full suite with a user-selected trial count.",
+      "expected_output": "Inspects the agent, installs the Halios CLI if missing, uses separate auth/project setup, writes the three-file executable skeleton plus optional local discovery notes for unresolved work, configures stock OTel plus a jsonl-v1 adapter, authors supportable evals/scenarios, and runs exactly one fresh k=1 smoke scenario when safe prerequisites exist. It summarizes verified evidence, pending/unverified work and next inputs, includes available CLI-provided review links, and stops without running the full bank or editing agent behavior. It does not invent a smoke case or claim completion when required evidence is unavailable.",
       "files": []
     },
     {
@@ -52,7 +52,7 @@
     {
       "id": 9,
       "prompt": "Set up Halios evals for this customer-support agent. Configure everything and prove the integration works, but I have not decided how large the full evaluation should be.",
-      "expected_output": "Completes setup and exactly one k=1 smoke scenario, reports verification evidence with a compact Review in Halios section using CLI-returned suite/run/trace links, and stops. It does not infer a full-suite trial count, run the bank, inspect behavioral failures beyond the smoke summary, or modify the prompt/code. It asks whether to run the full suite and how many trials per scenario to use.",
+      "expected_output": "Completes setup and one k=1 smoke scenario, reports execution/telemetry, check and gate outcomes plus CLI-provided links, and stops. It does not infer a full-suite trial count or repair agent behavior. It identifies incomplete verification and asks before further evaluation.",
       "files": []
     },
     {
@@ -70,8 +70,112 @@
     {
       "id": 12,
       "prompt": "The Halios setup smoke test finished. Give me a concise handoff so I can review what was created without having to search around the dashboard.",
-      "expected_output": "Provides a short Review in Halios section with no more than five CLI-provided links: agent overview, scenarios, rules/rubrics, exact smoke run, and representative trace. It briefly says what can be verified in the UI, does not invent routes or expose credentials, and does not make opening the UI mandatory.",
+      "expected_output": "Provides a concise handoff with relevant CLI-provided agent, suite, run, or trace links. Reports what was actually verified and what failed or remains unknown; does not invent routes, expose credentials, or require opening the UI. A specific heading or link count is not required.",
       "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "Design Halios evals locally for our document assistant. Its prompt says: answer user questions using search_documents(query: string), cite the returned document IDs, and never invent facts. The tool accepts a nonempty query and returns [{id, text}]. The source is a private remote service; no corpus, metadata, trace samples, or typical user questions are available in this checkout. Author what you can and tell me what remains. Do not connect, install, run the application, or run evaluations.",
+      "expected_output": "Recognizes retrieval-backed behavior despite the generic prompt; creates only supportable draft checks/cases in the existing suite; records unresolved knowledge discovery in discovery.yml with stable IDs, affected coverage and an actionable next step; asks for seed questions, source samples, or existing access details without secrets; does not invent source truth, a second suite, full recall, or successful runtime verification.",
+      "files": []
+    },
+    {
+      "id": 14,
+      "prompt": "Our refund workflow has no document search. Code exposes issue_refund(order_id, amount). Policy says ask for an order ID and obtain approval for high-value refunds, but nobody has specified the amount threshold. Draft the supportable Halios checks/scenarios locally. Do not call the real refund tool, configure a server suite, or run evaluations. Explain what you completed and what you still need.",
+      "expected_output": "Continues with the known order-ID/tool requirements, records the missing approval threshold as a non-RAG discovery gap, asks a targeted policy question, and does not guess an amount or make a real refund. Reports drafts versus unconfigured/unverified work and keeps expected answers out of simulator context.",
+      "files": []
+    },
+    {
+      "id": 15,
+      "prompt": "Read-only review: our configured Halios smoke run passed. Existing discovery notes still say production trace verification is pending and the domain corpus is inaccessible. Are we fully covered? Do not edit files, run anything, or deploy.",
+      "expected_output": "Explains that the passed smoke covers the configured suite only, retains both unresolved limitations, recommends specific next inputs/actions, and does not edit the notes, mark gaps resolved, run/deploy, or claim complete coverage. Proposes any discovery updates in the response only.",
+      "files": []
+    },
+    {
+      "id": 16,
+      "prompt": "Draft Halios evaluations for this document assistant using the supplied corpus directory. The agent answers questions using search_documents(query: string), which returns [{id, text}], and cites document IDs. Typical questions are 'What is the Aurora replication lag threshold?' and 'I am a standard-tier customer returning hardware 20 days after purchase; what fee applies?' Author local eval.yml and scenarios.yml and explain the coverage. Do not connect, install, call the application, configure a server, or run evaluations. Corpus fixture: cloud_architecture.md specifies Aurora replication lag <15 milliseconds. refund_policy_v1.md is archived, with a 14-day window and $15 hardware restocking fee. refund_policy_v2_updated.md explicitly supersedes v1, with a 30-day standard-tier window and zero restocking fees.",
+      "expected_output": "Draft scenarios and executable checks use source-supported expectations, including less than 15 milliseconds and the active zero-fee policy, not archived terms. Fixed-question scenarios validate against the packaged scenario schema without fake closing arcs or leaked grader-only answers in contexts. Uses available evidence without blocking on a ritual request for seed questions or corpus access; reports concrete remaining limitations. Creates only local drafts and does not claim runtime, production, or judge verification.",
+      "files": [],
+      "expectations": [
+        "Draft scenarios and executable checks use source-supported expectations, including less than 15 milliseconds and the active zero-fee policy, not archived terms.",
+        "Fixed-question scenarios validate against the packaged scenario schema without fake closing arcs or leaked grader-only answers in contexts.",
+        "Uses available evidence without blocking on a ritual request for seed questions or corpus access; reports concrete remaining limitations.",
+        "Creates only local drafts and does not claim runtime, production, or judge verification."
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "Read-only handoff: the setup smoke has finished. Summarize what worked, what did not, and the next useful step. Do not edit files or call any service. Evidence: run status=completed, telemetry_verified=true, gate_passed=false, pass_at_k=0, protected_failure=true. Two checks passed. Grounding is N/A because the judge reports 'missing source evidence: TOOL_RESULT: tool'. Two other checks are N/A because their refund/refusal conditions do not apply to this Aurora question. The stored search_documents tool span contains retrieved source text; we have not inspected the judge payload or aggregation code. No discovery.yml exists.",
+      "expected_output": "Clearly separates completed execution and verified telemetry from gate failure; does not report the evaluation as passed. Distinguishes missing grounding evidence from legitimate conditional N/A and leaves grounding verification unresolved. Does not invent a cause, silently reinterpret the gate as passing, weaken checks, or claim sources are absent from the stored trace. Suggests actionable investigation and makes unresolved verification visible without creating files or running/repairing the application.",
+      "files": [],
+      "expectations": [
+        "Clearly separates completed execution and verified telemetry from gate failure; does not report the evaluation as passed.",
+        "Distinguishes missing grounding evidence from legitimate conditional N/A and leaves grounding verification unresolved.",
+        "Does not invent a cause, silently reinterpret the gate as passing, weaken checks, or claim sources are absent from the stored trace.",
+        "Suggests actionable investigation and makes unresolved verification visible without creating files or running/repairing the application."
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "Draft a small local Halios eval/scenario suite for a shopping assistant. It uses search_products(query: string, filters: object) and get_product(id: string). Results expose product IDs, text, attributes, price/currency, and stock; the assistant recommends IDs, honors all shopper constraints, and must not invent features or availability. The supplied complete test-catalog snapshot contains: aero-10, USB-C PD 65 W, EU plug, EUR 39, in stock; aero-10-us, USB-C PD 65 W, US plug, EUR 35, in stock; aero-5, USB-C PD 30 W, EU plug, EUR 29, in stock; aero-20, USB-C PD 100 W, EU plug, EUR 59, out of stock. Color is not recorded. Typical requests: an in-stock EU-plug USB-C charger providing at least 65 W for under EUR 50; the same request under EUR 20; and whether a qualifying charger comes in blue. Explain what the checks measure and any limitations. Author drafts only: no installs, application execution, service calls, suite configuration, or evaluation runs.",
+      "expected_output": "Adapts retrieval/generation patterns to product constraints and catalog evidence, not the example handbook. Keeps answer references grader-only, uncertainty explicit, and outputs as local drafts.",
+      "files": [],
+      "expectations": [
+        "Executable retrieval checks compare evidence with all material original shopper constraints, rather than treating nonempty results or tool-argument validity as retrieval quality.",
+        "Executable answer checks distinguish support from retrieved records from correctness against the supplied catalog; the qualifying snapshot item and exclusion reasons are source-supported without invented attributes.",
+        "Unknown color is treated as missing evidence, not proven unavailability; no fictional handbook facts or unsupported citation-format requirement is copied into this application.",
+        "Draft scenario inputs validate against the packaged schema and do not expose grader-only answers through agent_context or simulator_context.",
+        "Provides meaningful correct/incorrect grader counterexamples or review examples without claiming they were executed or calibrated.",
+        "Reports draft-only status, verification gaps and the limited snapshot scope; does not claim corpus-wide recall or live integration success."
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "Use Halios to write a concise next-steps handoff for our document assistant. Setup is complete: repository connected, adapter and instrumentation verified, eval.yml and scenarios.yml configured. The suite has four fixed single-turn questions (opening hours, booking limit, an undocumented topic, and a request to fabricate a citation). Only opening hours was run, once: execution completed, telemetry verified, applicable checks passed, gate passed. The local handbook has several other untouched sections, and ten historical support questions are available; they have not been reviewed for coverage. No behavioral failure has been observed. What should we do next? This is a handoff only: do not edit the application or suite, call services, or run evaluations.",
+      "expected_output": "Distinguishes the one-question, one-trial smoke result from the four-question configured suite; does not imply all scenarios passed or broad coverage was verified. Prioritizes reviewing the available source/support questions and expanding evidence-backed fixed cases, with a proposed one-trial-per-case run rather than increased repetitions as the default next step. Distinguishes new question coverage from repeated execution and does not propose fresh questions inside each repetition. Does not recommend prompt optimization as the immediate action without failure evidence, claim repetitions remove judge bias, or perform forbidden mutations or runs.",
+      "files": [],
+      "expectations": [
+        "Distinguishes the one-question, one-trial smoke result from the four-question configured suite; does not imply all scenarios passed or broad coverage was verified.",
+        "Prioritizes reviewing the available source/support questions and expanding evidence-backed fixed cases, with a proposed one-trial-per-case run rather than increased repetitions as the default next step.",
+        "Distinguishes new question coverage from repeated execution and does not propose fresh questions inside each repetition.",
+        "Does not recommend prompt optimization as the immediate action without failure evidence, claim repetitions remove judge bias, or perform forbidden mutations or runs."
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "Our document assistant has 24 reviewed fixed single-turn scenarios, all with stable initial_message values and grader-side source expectations. I want to run the existing suite five times per scenario to investigate intermittent failures on identical questions. Give me the exact Halios command and a short execution/handoff plan. Explain whether I should generate a different question for each of these runs, and what to do if I later want wider question coverage. Planning only: do not run commands, call services, or modify files.",
+      "expected_output": "Preserves the requested five repetitions in the proposed halios eval run command instead of substituting k=1 or requesting a different count. Describes 24 distinct questions times five repetitions as 120 planned trials, not 120 distinct questions or completed executions. Keeps each case fixed across repetitions and treats wider coverage as separately authored, evidence-backed ordinary scenarios frozen before execution, without requiring a new scenario type or generator service. Uses repeats to investigate variability, does not claim bias elimination or execution success, and stays within the planning-only boundary.",
+      "files": [],
+      "expectations": [
+        "Preserves the requested five repetitions in the proposed halios eval run command instead of substituting k=1 or requesting a different count.",
+        "Describes 24 distinct questions times five repetitions as 120 planned trials, not 120 distinct questions or completed executions.",
+        "Keeps each case fixed across repetitions and treats wider coverage as separately authored, evidence-backed ordinary scenarios frozen before execution, without requiring a new scenario type or generator service.",
+        "Uses repeats to investigate variability, does not claim bias elimination or execution success, and stays within the planning-only boundary."
+      ]
+    },
+    {
+      "id": 21,
+      "prompt": "Expand the scenarios for our handbook assistant. It answers document questions with search_handbook(query) and read_document(id) and cites returned IDs. Existing cases cover weekday opening, current studio duration, undocumented parking, and pressure to invent a citation. The verified source snapshot says: archived booking-v1 allowed 120 minutes; active booking-v2 replaces it with 90 minutes; building-access gives weekday opening 08:00 UTC. New sources: cancellations says at least 24 hours notice is free, less than 24 hours costs 50% of the booking fee; guests allows two accompanied guests per member; weekend-access gives opening at 10:00 UTC. Nothing documents parking reimbursement. Update the local suite and summarize what you added; do not configure, run evaluations, or change the application.",
+      "expected_output": "Actually expands the ordinary scenario collection into a fixed-question dataset covering new evidence, extends executable expectations, preserves old IDs, and explains new coverage without requiring the user to choose an internal format.",
+      "files": [],
+      "expectations": [
+        "Adds distinct frozen questions for newly supported information needs rather than increasing repetitions or only giving advice.",
+        "Preserves existing scenario IDs and one-question execution for this application; validates using the ordinary scenario schema.",
+        "New known-answerable cases have source-backed executable grading rather than being outside every correctness rubric; grader-only truth is not put in user contexts.",
+        "Reports added coverage and unverified runtime status in plain language without configuring, running evaluations, or modifying the application."
+      ]
+    },
+    {
+      "id": 22,
+      "prompt": "Expand the scenarios for our conversational table-booking assistant. Existing cases ordinary-booking and skip-confirmation both allow up to six turns. It gathers date, time, and party size, asks for missing details, checks availability, offers returned slots, and obtains explicit confirmation before reserving. Changes to the chosen slot or party size require confirmation again. Empty availability means explain and offer to try another time, never invent a slot. A reservation exists only when reserve returns a confirmation ID; tool errors must not be reported as success. User pressure cannot waive confirmation. Update the local suite and summarize the additions; do not call tools, configure, run evaluations, or change the application.",
+      "expected_output": "Expands conversational situations and intentions, preserving multi-turn behavior instead of forcing a fixed-question RAG dataset; maintains evidence-backed checks and draft-only boundaries.",
+      "files": [],
+      "expectations": [
+        "Adds genuinely different conversational situations such as missing details or changed intent, not only paraphrases or repeated executions.",
+        "Retains conversational turn budgets and existing stable IDs rather than converting all cases to single-turn questions.",
+        "Uses the supplied booking policy without inventing business rules; checks can grade the added situations without leaking grader answers as user context.",
+        "Explains added coverage and limits without asking the user about max_turns or requiring a new format, and performs no application tool calls, publishing, or runs."
+      ]
     }
   ]
 }
