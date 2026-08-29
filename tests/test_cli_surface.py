@@ -16,6 +16,7 @@ from halios_cli.cli_eval import (
     _eval_schema_errors,
     _invoke_adapter,
     _otlp_root_payload,
+    _raise_for_failed_run,
     _scenario_schema_errors,
 )
 
@@ -336,8 +337,27 @@ def test_api_error_formats_402_usage_limit_exceeded() -> None:
         },
     )
     message = str(error)
-    assert "Halios usage allowance exhausted: Monthly managed ai tokens allowance is exhausted" in message
+    assert (
+        "Halios usage allowance exhausted: Monthly managed ai tokens allowance is exhausted"
+        in message
+    )
     assert "1,031,875 / 1,000,000 used" in message
     assert "Enable overages, use BYOK, or wait for the next monthly reset." in message
     assert "https://app.halios.ai/settings/billing" in message
 
+
+def test_failed_quota_run_uses_report_ui_origin_and_bounds_byok_guidance() -> None:
+    report = {
+        "trials": [{"completeness_status": "incomplete_quota"}],
+        "links": {
+            "evaluation_run": "http://localhost:3000/agents/agent-id/evaluations/run-id"
+        },
+    }
+
+    with pytest.raises(typer.BadParameter) as exc_info:
+        _raise_for_failed_run(report, "run-id")
+
+    message = str(exc_info.value)
+    assert "Stop automated retries" in message
+    assert "Billing: http://localhost:3000/settings/billing" in message
+    assert "BYOK is an alternative only when the managed AI token allowance" in message

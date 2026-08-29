@@ -793,10 +793,20 @@ def _raise_for_failed_run(report: dict[str, Any], run_id: str) -> None:
         or "quota" in str(trial.get("error") or "").lower()
     ]
     if quota_trials or report.get("completeness_status") == "incomplete_quota":
+        run_url = str((report.get("links") or {}).get("evaluation_run") or "")
+        parsed_run_url = urllib.parse.urlsplit(run_url)
+        if parsed_run_url.scheme in {"http", "https"} and parsed_run_url.hostname:
+            billing_origin = urllib.parse.urlunsplit(
+                (parsed_run_url.scheme, parsed_run_url.netloc, "", "", "")
+            )
+            billing_url = f"{billing_origin}/settings/billing"
+        else:
+            billing_url = "https://app.halios.ai/settings/billing"
         raise typer.BadParameter(
             f"Evaluation run {run_id} marked incomplete_quota: monthly usage allowance reached.\n"
-            f"Managed AI or check evaluation quota is exhausted. Stop automated retries.\n"
-            f"Enable pay-as-you-go: https://app.halios.ai/settings/billing or configure BYOK."
+            "Stop automated retries. Enable pay-as-you-go or wait for the monthly reset.\n"
+            f"Billing: {billing_url}\n"
+            "BYOK is an alternative only when the managed AI token allowance is exhausted."
         )
 
     check_execution_error_count = int(report.get("check_execution_error_count") or 0)
