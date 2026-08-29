@@ -40,7 +40,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Install Halios CLI
-        run: uv tool install 'haliosai-cli>=2.0.0,<3'
+        run: uv tool install 'haliosai-cli>=2.0.9,<3'
 
       - name: Validate project and suite
         run: |

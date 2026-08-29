@@ -11,6 +11,7 @@ import typer
 from typer.testing import CliRunner
 
 from halios_cli import cli_project, cli_support, cli_trace
+from halios_cli._version import __version__
 from halios_cli.cli import app
 from halios_cli.cli_eval import (
     _eval_schema_errors,
@@ -51,6 +52,20 @@ def test_top_level_exposes_agent_workflows() -> None:
     assert result.exit_code == 0
     assert "optimize" in result.output
     assert "trace" in result.output
+
+
+def test_skill_install_guidance_requires_current_cli_version() -> None:
+    root = pathlib.Path(__file__).resolve().parents[1]
+    expected_requirement = f"haliosai-cli>={__version__}"
+    expected_compatibility = f"haliosai-cli {__version__} or newer"
+
+    assert expected_compatibility in (root / "skills/halios/SKILL.md").read_text()
+    for relative_path in (
+        "README.md",
+        "skills/halios/workflows/connect.md",
+        "skills/halios/assets/github-actions-eval-gate.yml",
+    ):
+        assert expected_requirement in (root / relative_path).read_text()
 
 
 def test_bundled_eval_example_is_valid_and_balanced() -> None:
