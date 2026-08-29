@@ -25,7 +25,21 @@ class ApiError(typer.BadParameter):
     def __init__(self, status_code: int, detail: Any):
         self.status_code = status_code
         self.detail = detail
-        super().__init__(f"Halios API {status_code}: {detail}")
+        if status_code == 402 and isinstance(detail, dict) and detail.get("code") == "usage_limit_exceeded":
+            meter = str(detail.get("meter") or "usage").replace("_", " ")
+            remediation = str(detail.get("remediation") or "Enable pay-as-you-go or wait for the next monthly reset.")
+            billing_url = str(detail.get("billing_url") or "https://app.halios.ai/settings/billing")
+            used = detail.get("used")
+            included = detail.get("included")
+            usage_str = f" ({used:,} / {included:,} used)" if used is not None and included is not None else ""
+            msg = (
+                f"Halios usage allowance exhausted: Monthly {meter} allowance is exhausted{usage_str}.\n"
+                f"{remediation}\n"
+                f"Billing: {billing_url}"
+            )
+            super().__init__(msg)
+        else:
+            super().__init__(f"Halios API {status_code}: {detail}")
 
 
 def normalize_url(value: str) -> str:

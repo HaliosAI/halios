@@ -40,7 +40,7 @@ class FakeApiClient:
 
 def _patch_trace_context(monkeypatch) -> None:
     FakeApiClient.calls = []
-    credentials = SimpleNamespace(ui_base_url="https://app.halios.ai")
+    credentials = SimpleNamespace(ui_base_url="https://app.halios.ai", api_key="test")
     monkeypatch.setattr(cli_trace, "_context", lambda: ("agent-id", credentials))
     monkeypatch.setattr(cli_trace, "ApiClient", FakeApiClient)
 
@@ -321,3 +321,23 @@ def test_eval_quality_gaps_flags_empty_simulator_context() -> None:
     ]
     gaps = _eval_quality_gaps(eval_plan={}, scenarios=scenarios)
     assert any("simulator_context is empty for a multi-turn scenario" in gap for gap in gaps)
+
+
+def test_api_error_formats_402_usage_limit_exceeded() -> None:
+    error = cli_support.ApiError(
+        402,
+        {
+            "code": "usage_limit_exceeded",
+            "meter": "managed_ai_tokens",
+            "used": 1031875,
+            "included": 1000000,
+            "remediation": "Enable overages, use BYOK, or wait for the next monthly reset.",
+            "billing_url": "https://app.halios.ai/settings/billing",
+        },
+    )
+    message = str(error)
+    assert "Halios usage allowance exhausted: Monthly managed ai tokens allowance is exhausted" in message
+    assert "1,031,875 / 1,000,000 used" in message
+    assert "Enable overages, use BYOK, or wait for the next monthly reset." in message
+    assert "https://app.halios.ai/settings/billing" in message
+

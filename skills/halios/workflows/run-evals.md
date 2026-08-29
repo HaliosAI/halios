@@ -4,6 +4,11 @@ Use `halios project check` to confirm a matching, nonempty configured suite and 
 AI, and `halios eval review --json` for local validation. Open discovery notes describe limitations;
 they do not override executable-suite errors or run outcomes.
 
+On a 402 Usage Limit Exceeded error or run marked `incomplete_quota` (e.g. `Halios usage allowance exhausted: Monthly managed ai tokens allowance is exhausted`),
+recognize that the organization's monthly allowance has been reached. Stop automated retries immediately.
+Inform the user with the direct billing URL to enable pay-as-you-go (`/settings/billing`) or switch to BYOK custom models.
+Do not retry or treat quota exhaustion as an agent code bug.
+
 For setup, choose one meaningful safe scenario:
 
 ```bash

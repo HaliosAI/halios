@@ -782,12 +782,28 @@ def _verify_simulation_telemetry(
 
 
 def _raise_for_failed_run(report: dict[str, Any], run_id: str) -> None:
+    trials = [trial for trial in (report.get("trials") or []) if isinstance(trial, dict)]
+    quota_trials = [
+        trial
+        for trial in trials
+        if trial.get("completeness_status") == "incomplete_quota"
+        or trial.get("outcome") == "ineligible"
+        or "managed ai allowance" in str(trial.get("error") or "").lower()
+        or "monthly allowance" in str(trial.get("error") or "").lower()
+        or "quota" in str(trial.get("error") or "").lower()
+    ]
+    if quota_trials or report.get("completeness_status") == "incomplete_quota":
+        raise typer.BadParameter(
+            f"Evaluation run {run_id} marked incomplete_quota: monthly usage allowance reached.\n"
+            f"Managed AI or check evaluation quota is exhausted. Stop automated retries.\n"
+            f"Enable pay-as-you-go: https://app.halios.ai/settings/billing or configure BYOK."
+        )
+
     check_execution_error_count = int(report.get("check_execution_error_count") or 0)
     failed_trials = [
         trial
-        for trial in (report.get("trials") or [])
-        if isinstance(trial, dict)
-        and (
+        for trial in trials
+        if (
             trial.get("error")
             or trial.get("state") == "evaluation_failed"
             or trial.get("outcome") in {"error", "errored", "timed_out", "blocked"}
@@ -1042,6 +1058,14 @@ def run(
                     timeout=30,
                 )
                 if otlp_response.is_error:
+                    if otlp_response.status_code == 402:
+                        try:
+                            detail = otlp_response.json().get("detail", otlp_response.text)
+                        except Exception:
+                            detail = otlp_response.text
+                        from .cli_support import ApiError
+
+                        raise ApiError(402, detail)
                     raise typer.BadParameter(
                         f"OTLP root export failed: {otlp_response.status_code}"
                     )
