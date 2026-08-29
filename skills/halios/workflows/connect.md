@@ -6,16 +6,16 @@ request to deploy or redesign the agent.
 
 ## CLI and project
 
-The Skill and CLI are separate installs. Check `halios --version` and require 2.0.7 or newer.
+The Skill and CLI are separate installs. Check `halios --version` and require 2.0.9 or newer.
 If installation is needed, explain that `haliosai-cli` will be a user-level tool and obtain the
 required approval. Use an existing isolated installer:
 
 ```bash
-uv tool install 'haliosai-cli>=2.0.7'
+uv tool install 'haliosai-cli>=2.0.9'
 # For an existing uv installation:
 uv tool upgrade haliosai-cli
 # Or use an existing pipx:
-pipx install --force 'haliosai-cli>=2.0.7'
+pipx install --force 'haliosai-cli>=2.0.9'
 ```
 
 If neither exists, choose a suitable official isolated installer for the platform. Keep the CLI
