@@ -5,10 +5,10 @@ description: >
   run evaluations, inspect failures, add reliability gates, or optimize an agent prompt. Use for agent
   evaluation and reliability workflows, including requests that do not yet name Halios.
 license: Apache-2.0
-compatibility: Requires shell access and Python 3.10+ to install and run haliosai-cli 2.0.7 or newer.
+compatibility: Requires shell access and Python 3.10+ to install and run haliosai-cli 2.0.8 or newer.
 metadata:
-  version: "2.0.7"
-  min_halios_cli: "2.0.7"
+  version: "2.0.8"
+  min_halios_cli: "2.0.8"
 ---
 
 # Halios agent reliability
