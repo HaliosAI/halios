@@ -53,6 +53,3 @@ access or scale warrants it; unavailable evidence remains a discovery gap, not i
 Ranking metrics require labels and an appropriate runner; reranker claims need candidate/final
 rankings. Record unsupported capabilities without pretending arbitrary tool-boundary resume,
 complete recall, or new metrics are already available.
-
-Further rationale: [Hamel's FAQ](https://hamel.dev/blog/posts/evals-faq/) and
-[Jason Liu's RAG eval relationships](https://jxnl.co/writing/2025/05/19/there-are-only-6-rag-evals/).
