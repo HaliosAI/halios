@@ -3,11 +3,11 @@
 [![PyPI version](https://img.shields.io/pypi/v/haliosai-cli.svg)](https://pypi.org/project/haliosai-cli/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Your pair programmer for AI agent evaluations.**
+**Evals for any agent in minutes.**
 
-Halios helps you build reliable AI agents in minutes. Add the Halios skill to **Codex**, **Claude Code**, **Cursor**, or your favorite coding agent, and create eval suites, run multi-turn simulations, investigate failures, and gate pull requests directly from your repository. 
-
-Halios provides the evaluation framework, developer tools, and hosted evaluation runtime underneath.
+Halios brings evals to your coding agent. Add the open-source Halios skill to **Codex**,
+**Claude Code**, **Cursor**, or another coding agent, then create scenarios, run fresh multi-turn
+trials, investigate failures, and verify improvements from your repository.
 
 ---
 
@@ -21,7 +21,7 @@ Add the Halios skill to your coding agent environment:
 npx skills add HaliosAI/halios --skill halios
 ```
 
-*(Works with Codex, Claude Code, Cursor, GitHub Copilot, Gemini CLI, OpenCode, and any harness supporting the open Agent Skills format).*
+Works with coding agents and harnesses that support the open Agent Skills format.
 
 ### 2. Ask Your Coding Agent
 
@@ -39,21 +39,6 @@ direct Halios UI links for reviewing the materialized suite, smoke run, and trac
 If the Halios CLI is missing, the coding agent will tell you before installing `haliosai-cli` as
 user-level tooling that can be reused across projects. It is kept separate from your application's
 runtime dependencies.
-
-### When evidence or access is missing
-
-The Skill continues supportable work and records unresolved evidence, access, policy, capability,
-or verification needs in optional `.halios/discovery.yml`. This applies to any agent, including
-RAG applications with inaccessible knowledge sources. Its handoff distinguishes completed work,
-unverified or pending work, and the next input/action needed.
-
-`halios eval review --json` exposes these local notes under `discovery`, separately from executable
-suite validation. Open or malformed discovery notes produce advisory output without changing review
-exit codes or evaluation gates. A passing configured suite is not proof of missing coverage.
-The notes are not uploaded, executed, or used as grading inputs; see the
-[discovery contract](skills/halios/references/discovery.md). Existing projects need no new file.
-
----
 
 ### Standalone CLI Installation
 
@@ -94,6 +79,19 @@ API endpoint used by `HALIOS_BASE_URL`.
 - **Framework agnostic**: Works with any agent architecture—OpenAI Agents SDK, LangChain, LlamaIndex, PydanticAI, or custom workflows.
 - **Stock OpenTelemetry**: Applications emit standard OpenTelemetry GenAI spans; no proprietary vendor lock-in in your production runtime.
 - **Unified local, CI, and production loop**: The same checks run during local development, gate merge requests in CI, and monitor live production traces.
+
+---
+
+## Incomplete Evidence or Access
+
+When evidence, access, policy, or runtime capabilities are missing, the Skill continues supportable
+work and can record unresolved needs in optional `.halios/discovery.yml`. Its handoff separates
+completed work from unverified or pending work and names the next input or action required.
+
+`halios eval review --json` exposes these local notes under `discovery`, separately from executable
+suite validation. Discovery notes are advisory: they do not change review exit codes or evaluation
+gates, and they are not uploaded or used as grading inputs. See the
+[discovery contract](skills/halios/references/discovery.md).
 
 ---
 
